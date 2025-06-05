@@ -27,7 +27,7 @@ if (isset($_GET['doctor_name']) && isset($_GET['date']) && isset($_GET['time']))
     <div id="confirmation-details" class="confirmation-box">
       <p>Votre rendez-vous avec Dr. <?php echo $doctorName; ?> le <?php echo $date; ?> à <?php echo $time; ?> est confirmé.</p>
     </div>
-    <a href="index.html" class="btn-rdv">Retour à l'accueil</a>
+    <a href="index.php" class="btn-rdv">Retour à l'accueil</a>
   </main>
 
   <script src="js/confirmation.js"></script>

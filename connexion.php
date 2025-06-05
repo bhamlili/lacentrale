@@ -1,19 +1,7 @@
 <?php
 session_start();
 
-// Database connection details
-$servername = "localhost";
-$username = "your_db_username"; // Replace with your database username
-$password = "your_db_password"; // Replace with your database password
-$dbname = "medical_appointments";
-
-// Create connection
-$conn = new mysqli($servername, $username, $password, $dbname);
-
-// Check connection
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
+require_once __DIR__ . '/db_config.php';
 
 $loginError = "";
 $signupSuccess = "";
@@ -25,7 +13,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['login_submit'])) {
     $password = $_POST['password'];
 
     // Prepare and execute the query
-    $stmt = $conn->prepare("SELECT doctor_id, password FROM doctors WHERE username = ?");
+    $stmt = $link->prepare("SELECT doctor_id, password FROM doctors WHERE username = ?");
     $stmt->bind_param("s", $username);
     $stmt->execute();
     $stmt->store_result();
@@ -61,7 +49,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['signup_submit'])) {
     $hashed_password = password_hash($password, PASSWORD_DEFAULT);
 
     // Prepare and execute the insert query
-    $stmt = $conn->prepare("INSERT INTO doctors (name, specialty, contact_info, username, password) VALUES (?, ?, ?, ?, ?)");
+    $stmt = $link->prepare("INSERT INTO doctors (name, specialty, contact_info, username, password) VALUES (?, ?, ?, ?, ?)");
     $stmt->bind_param("sssss", $name, $specialty, $contact_info, $username, $hashed_password);
 
     if ($stmt->execute()) {
@@ -73,7 +61,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['signup_submit'])) {
     $stmt->close();
 }
 
-$conn->close();
+mysqli_close($link);
 ?>
 <!DOCTYPE html>
 <html lang="fr">

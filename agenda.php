@@ -1,25 +1,12 @@
 <?php
-// Database connection details (replace with your actual credentials)
-$servername = "localhost";
-$username = "your_username";
-$password = "your_password"; // Replace with your actual password
-$dbname = "medical_appointments";
-$conn = null; // Initialize connection variable
-// Create connection
-$conn = new mysqli($servername, $username, $password, $dbname);
-
-// Check connection
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
+include '/app/db_config.php';
 
 // Get doctor ID from URL
 $doctor_id = isset($_GET['doctor_id']) ? intval($_GET['doctor_id']) : 0;
 
 if ($doctor_id > 0) {
     // Fetch doctor information
-    $doctor_sql = "SELECT name, specialty FROM doctors WHERE doctor_id = ?";
-    $doctor_stmt = $conn->prepare($doctor_sql);
+    $doctor_sql = "SELECT name, specialty FROM doctors WHERE doctor_id = ?";    $doctor_stmt = $link->prepare($doctor_sql);
     $doctor_stmt->bind_param("i", $doctor_id);
     $doctor_stmt->execute();
     $doctor_result = $doctor_stmt->get_result();
@@ -27,8 +14,7 @@ if ($doctor_id > 0) {
 
     // Fetch doctor's regular working hours
     $availability_sql = "SELECT day_of_week, start_time, end_time FROM doctor_availability WHERE doctor_id = ?";
-    $availability_stmt = $conn->prepare($availability_sql);
-    $availability_stmt->bind_param("i", $doctor_id);
+    $availability_stmt = $link->prepare($availability_sql);    $availability_stmt->bind_param("i", $doctor_id);
     $availability_stmt->execute();
     $availability_result = $availability_stmt->get_result();
     $availability = [];
@@ -37,8 +23,7 @@ if ($doctor_id > 0) {
     }
 
     // Fetch existing appointments for this doctor
-    $appointments_sql = "SELECT appointment_datetime FROM appointments WHERE doctor_id = ? AND status = 'scheduled'";
-    $appointments_stmt = $conn->prepare($appointments_sql);
+    $appointments_sql = "SELECT appointment_datetime FROM appointments WHERE doctor_id = ? AND status = 'scheduled'";    $appointments_stmt = $link->prepare($appointments_sql);
     $appointments_stmt->bind_param("i", $doctor_id);
     $appointments_stmt->execute();
     $appointments_result = $appointments_stmt->get_result();
@@ -50,13 +35,13 @@ if ($doctor_id > 0) {
     $doctor_stmt->close();
     $availability_stmt->close();
 } else {
-    // Redirect if no doctor ID is provided
+    // Redirect if no doctor ID is provided    // Redirect if no doctor ID is provided
     header("Location: /index.php"); // Use absolute path
     exit();
 }
 
 // Close connection
-$conn->close();
+$link->close();
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -143,7 +128,7 @@ $conn->close();
         <div class="date">${jourNum} ${moisNom} ${annee}</div>
       `;
       card.onclick = () => {
-        window.location.href = `reservation.html?medecin=...&jour=...&heure=...`;
+        window.location.href = `reservation.php?medecin=...&jour=...&heure=...`;
       };
 
       agendaDiv.appendChild(card);

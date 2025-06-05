@@ -104,7 +104,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_working_hours']
     <nav>
      <?php
       $conn = new mysqli($servername, $username, $password, $dbname);
-      if ($conn->connect_error) {
+      if ($conn->connect_error) {git
          die("Connection failed: " . $conn->connect_error);
       }
 

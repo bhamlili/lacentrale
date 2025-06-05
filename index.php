@@ -1,74 +1,118 @@
-<?php
-// Database connection details (replace with your actual credentials)
-$servername = "localhost";
-$username = "root";
-$password = "password";
-$dbname = "medical_appointments";
-
-// Create connection
-$conn = new mysqli($servername, $username, $password, $dbname);
-
-// Check connection
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
-
-// Fetch doctors from the database
-$sql = "SELECT doctor_id, name, specialty FROM doctors";
-$result = $conn->query($sql);
-
-$doctors = [];
-if ($result->num_rows > 0) {
-    while ($row = $result->fetch_assoc()) {
-        $doctors[] = $row;
-    }
-}
-
-$conn->close();
-?>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Médecins à Fès</title>
-  <link rel="stylesheet" href="css/style.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Accueil - LaCentrale.ma</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Cairo', sans-serif;
+      background: #f5f5f5 url('fond-texture.jpg') repeat;
+    }
+
+    header {
+      background-color: white;
+      padding: 15px 30px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    .logo {
+      font-size: 24px;
+      font-weight: bold;
+      color: #007acc;
+    }
+
+    .logo span {
+      color: #0abde3;
+    }
+
+    .container {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      gap: 40px;
+      margin: 60px auto;
+      max-width: 900px;
+      flex-wrap: wrap; /* Permet d’adapter en mobile */
+    }
+
+    .card {
+      flex: 1 1 300px; /* Prend au moins 300px, s’adapte */
+      max-width: 350px;
+      background-color: #e0e0e0;
+      padding: 40px 20px;
+      border-radius: 12px;
+      box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+      text-align: center;
+      position: relative;
+      box-sizing: border-box;
+    }
+
+    .card.patient {
+      background: #cce5f5;
+    }
+
+    .card.medecin {
+      background: #ffd180;
+    }
+
+    .card img {
+      width: 150px;
+      height: 150px;
+      object-fit: cover;
+      border-radius: 50%;
+      border: 4px solid white;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      margin-bottom: 30px;
+    }
+
+    .card a {
+      display: inline-block;
+      padding: 15px 30px;
+      font-size: 18px;
+      background: #007acc;
+      color: white;
+      text-decoration: none;
+      border-radius: 8px;
+      transition: background 0.3s;
+      font-weight: 600;
+    }
+
+    .card a:hover {
+      background: #005f9e;
+    }
+
+    /* Responsive pour petits écrans */
+    @media (max-width: 700px) {
+      .container {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .card {
+        max-width: 90%;
+        margin-bottom: 30px;
+      }
+    }
+  </style>
 </head>
 <body>
-  <header class="header">
-    <div class="logo">LaCentrale<span class="dot">.</span><span class="ma">ma</span></div>
-    <nav>
-      <ul>
-        <li><a href="#">Médecin généraliste</a></li>
-        <li><a href="#">Dentiste</a></li>
-        <li><a href="#">Pédiatre</a></li>
-        <li><a href="#" class="btn-pink">Nous rejoindre</a></li>
-      </ul>
-    </nav>
+  <header>
+    <div class="logo">LaCentrale<span>.ma</span></div>
   </header>
 
-  <section class="search-section">
-    <input type="text" id="searchInput" placeholder="Rechercher un médecin..." />
-    <button onclick="rechercher()">Rechercher</button>
-  </section>
-
-  <main>
-    <h2 class="section-title">Médecins disponibles à Fès</h2>
-    <div id="doctor-list" class="doctor-list">
-      <?php if (!empty($doctors)): ?>
-        <?php foreach ($doctors as $doctor): ?>
-          <div class="doctor-card">
-            <h3><?php echo htmlspecialchars($doctor['name']); ?></h3>
-            <p><?php echo htmlspecialchars($doctor['specialty']); ?></p>
-            <a href="/agenda.php?doctor_id=<?php echo $doctor['doctor_id']; ?>">Voir le profil et prendre rendez-vous</a>
-          </div>
-        <?php endforeach; ?>
-      <?php else: ?>
-        <p>Aucun médecin disponible pour le moment.</p>
-      <?php endif; ?>
+  <div class="container">
+    <div class="card patient">
+      <img src="img/patient.jpg" alt="Patient" />
+      <a href="/patient_doctor_list.php">Réserver un rendez-vous</a>
     </div>
-  </main>
 
-  <script src="js/script.js"></script>
+    <div class="card medecin">
+      <img src="img/medecin.jpg" alt="Médecin" />
+      <a href="/connexion.php">Gestion des rendez-vous</a>
+    </div>
+  </div>
 </body>
 </html>
