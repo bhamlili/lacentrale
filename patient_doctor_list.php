@@ -1,5 +1,6 @@
 <?php
 // Database connection details (replace with your actual credentials)
+include '/lacentrale/config.php';
 $servername = "localhost";
 $username = "root";
 $password = "password";
@@ -60,7 +61,7 @@ $conn->close();
           <div class="doctor-card">
             <h3><?php echo htmlspecialchars($doctor['name']); ?></h3>
             <p><?php echo htmlspecialchars($doctor['specialty']); ?></p>
-            <a href="/agenda.php?doctor_id=<?php echo $doctor['doctor_id']; ?>">Voir le profil et prendre rendez-vous</a>
+            <a href="<?php echo generate_url('agenda.php?doctor_id=' . $doctor['doctor_id']); ?>">Voir le profil et prendre rendez-vous</a>
           </div>
         <?php endforeach; ?>
       <?php else: ?>

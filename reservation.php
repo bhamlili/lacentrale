@@ -1,6 +1,7 @@
 <?php
 session_start();
 
+include 'config.php';
 // Database connection details
 $servername = "localhost";
 $username = "root"; // Replace with your database username
@@ -57,7 +58,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 'doctor_id' => $doctor_id_post,
                 'datetime' => $appointment_datetime_post
             ];
-            header("Location: /confirmation.php");
+            header("Location: " . generate_url('confirmation.php'));
             exit;
         } else {
             echo "Error inserting appointment: " . $conn->error;
@@ -94,7 +95,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         } ?>
     </div>
 
-    <form id="form-reservation" method="POST" action="/reservation.php">
+    <form id="form-reservation" method="POST" action="<?php echo generate_url('reservation.php'); ?>">
       <label>Nom :</label>
       <input type="text" name="nom" required />
 

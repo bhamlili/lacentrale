@@ -1,6 +1,8 @@
 <?php
 session_start();
 
+include 'config.php';
+
 // Database connection details
 $servername = "localhost";
 $username = "root"; // Replace with your database username
@@ -9,7 +11,7 @@ $dbname = "lacentrale";
 
 // Check if the doctor is logged in
 if (!isset($_SESSION['doctor_id'])) {
-    header("Location: /connexion.php");
+    header("Location: " . generate_url('connexion.php'));
 
     // Add a connection to the database within this block if needed for redirection logic
     // (though typically session check is enough before any DB interaction related to the user)
@@ -50,7 +52,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['cancel_appointment']))
     $stmt_cancel->bind_param("ii", $appointment_id_to_cancel, $doctor_id);
     if ($stmt_cancel->execute()) {
         // Redirect or refresh the page after successful cancellation
-        header("Location: /gestion_med.php");
+        header("Location: " . generate_url('gestion_med.php'));
         exit();
     } else {
         // Handle error if cancellation fails
@@ -150,10 +152,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_working_hours']
           $doctor = $result->fetch_assoc();
       ?>
       <ul>
-        <li><a href="#">Accueil</a></li>
-        <li><a href="#">Rendez-vous</a></li>
-        <li><a href="#">Patients</a></li>
-        <li><a href="#">Déconnexion</a></li>
+        <li><a href="<?php echo generate_url('index.php'); ?>">Accueil</a></li>
+        <li><a href="<?php echo generate_url('gestion_med.php'); ?>">Rendez-vous</a></li>
+        <li><a href="#">Patients</a></li> <?php /* Assuming 'Patients' link is not yet implemented */?>
+        <li><a href="<?php echo generate_url('logout.php'); ?>">Déconnexion</a></li> <?php /* Assuming you'll create a logout.php */?>
       </ul>
     </nav>
    <div class="doctor-info" style="color: white;">
@@ -314,7 +316,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_working_hours']
   <div class="modal" id="modal">
     <div class="modal-content">
       <span class="close" id="closeModal">&times;</span>
-      <h3>Nouveau Rendez-vous</h3>
+      <h3>Nouveau Rendez-vous</h3> <?php /* This form was updated in a previous step to submit via JS fetch */ ?>
       <form id="rdvForm" method="POST" action="/gestion_med.php">
         <label>Nom du patient: <input type="text" id="nom" required></label>
         <label>Date: <input type="date" id="datePicker" required></label>

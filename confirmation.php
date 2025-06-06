@@ -1,11 +1,13 @@
 <?php
+include 'config.php';
+
 if (isset($_GET['doctor_name']) && isset($_GET['date']) && isset($_GET['time'])) {
     $doctorName = htmlspecialchars($_GET['doctor_name']);
     $date = htmlspecialchars($_GET['date']);
     $time = htmlspecialchars($_GET['time']);
 } else {
     // Redirect or display an error if details are missing
-    header('Location: /path/to/your/project/index.php'); // Adjust the path
+    header('Location: ' . generate_url('index.php')); // Adjust the path
     exit;
 }
 ?>
@@ -27,9 +29,7 @@ if (isset($_GET['doctor_name']) && isset($_GET['date']) && isset($_GET['time']))
     <div id="confirmation-details" class="confirmation-box">
       <p>Votre rendez-vous avec Dr. <?php echo $doctorName; ?> le <?php echo $date; ?> à <?php echo $time; ?> est confirmé.</p>
     </div>
-    <a href="index.php" class="btn-rdv">Retour à l'accueil</a>
+    <a href="<?php echo generate_url('index.php'); ?>" class="btn-rdv">Retour à l'accueil</a>
   </main>
-
-  <script src="js/confirmation.js"></script>
 </body>
 </html>

@@ -1,3 +1,7 @@
+<?php
+include 'config.php';
+?>
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -106,12 +110,12 @@
   <div class="container">
     <div class="card patient">
       <img src="img/patient.jpg" alt="Patient" />
-      <a href="/patient_doctor_list.php">Réserver un rendez-vous</a>
+      <a href="<?php echo generate_url('patient_doctor_list.php'); ?>">Réserver un rendez-vous</a>
     </div>
 
     <div class="card medecin">
       <img src="img/medecin.jpg" alt="Médecin" />
-      <a href="/connexion.php">Gestion des rendez-vous</a>
+      <a href="<?php echo generate_url('connexion.php'); ?>">Gestion des rendez-vous</a>
     </div>
   </div>
 </body>

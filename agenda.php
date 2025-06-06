@@ -1,4 +1,5 @@
 <?php
+include 'config.php';
 include './db_config.php';
 
 // Get doctor ID from URL
@@ -37,7 +38,7 @@ if ($doctor_id > 0) {
 } else {
     // Redirect if no doctor ID is provided    // Redirect if no doctor ID is provided
     header("Location: /index.php"); // Use absolute path
-    exit();
+ header("Location: " . generate_url('index.php'));
 }
 
 // Close connection
@@ -128,7 +129,7 @@ $link->close();
         <div class="date">${jourNum} ${moisNom} ${annee}</div>
       `;
       card.onclick = () => {
-        window.location.href = `reservation.php?medecin=...&jour=...&heure=...`;
+        window.location.href = `<?php echo generate_url('reservation.php'); ?>?medecin=...&jour=...&heure=...`;
       };
 
       agendaDiv.appendChild(card);
