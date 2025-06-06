@@ -1,41 +1,10 @@
-const medecins = [
-  {
-    nom: "Dr. Salma Bennis",
-    specialite: "Cardiologue",
-    ville: "Fès",
-    image: "https://cdn-icons-png.flaticon.com/512/387/387561.png"
-  },
-  {
-    nom: "Dr. Youssef El Amrani",
-    specialite: "Dentiste",
-    ville: "Fès",
-    image: "https://cdn-icons-png.flaticon.com/512/607/607414.png"
-  },
-  {
-    nom: "Dr. Rania Lahlou",
-    specialite: "Dermatologue",
-    ville: "Fès",
-    image: "https://cdn-icons-png.flaticon.com/512/4341/4341088.png"
-  },
-  {
-    nom: "Dr. Hicham Berrada",
-    specialite: "Médecin généraliste",
-    ville: "Fès",
-    image: "https://cdn-icons-png.flaticon.com/512/1995/1995574.png"
-  },
-  {
-    nom: "Dr. Amal Idrissi",
-    specialite: "Pédiatre",
-    ville: "Fès",
-    image: "https://cdn-icons-png.flaticon.com/512/3602/3602123.png"
-  }
-];
+let allDoctors = []; // Store all fetched doctors for search functionality
 
 const container = document.getElementById("doctor-list");
 
-function afficherMedecins(liste) {
+function afficherMedecins(doctors) {
   container.innerHTML = "";
-  liste.forEach(doc => {
+  doctors.forEach(doc => {
     const card = document.createElement("div");
     card.className = "card";
     card.innerHTML = `
@@ -43,22 +12,45 @@ function afficherMedecins(liste) {
       <h3>${doc.nom}</h3>
       <p><strong>Spécialité:</strong> ${doc.specialite}</p>
       <p><strong>Ville:</strong> ${doc.ville}</p>
-     <a href="agenda.html?medecin=${encodeURIComponent(doc.nom)}" class="btn-rdv">
-  Prendre rendez-vous
-</a>
+      <a href="/agenda.php?doctor_id=${doc.doctor_id}" class="btn-rdv">Prendre rendez-vous</a>
 
     `;
     container.appendChild(card);
   });
 }
 
+async function fetchDoctors() {
+  try {
+    // Fetch data from the PHP endpoint
+    const response = await fetch("/patient_doctor_list.php");
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const data = await response.json(); // Assuming the PHP returns JSON
+
+    // Map the fetched data to the expected format (assuming PHP returns doctor_id, name, specialty)
+    allDoctors = data.map(doctor => ({
+      doctor_id: doctor.doctor_id,
+      nom: doctor.name,
+      specialite: doctor.specialty,
+      ville: "Fès", // Assuming all doctors are in Fès based on previous data
+      image: "https://cdn-icons-png.flaticon.com/512/1995/1995574.png" // Placeholder image
+    }));
+
+    afficherMedecins(allDoctors);
+  } catch (error) {
+    console.error("Error fetching doctors:", error);
+    container.innerHTML = "<p>Une erreur s'est produite lors du chargement des médecins.</p>";
+  }
+}
+
 function rechercher() {
   const query = document.getElementById("searchInput").value.toLowerCase();
-  const resultats = medecins.filter(m =>
+  const resultats = allDoctors.filter(m =>
     m.nom.toLowerCase().includes(query) || m.specialite.toLowerCase().includes(query)
   );
   afficherMedecins(resultats);
 }
 
 // Charger tous les médecins à Fès au démarrage
-afficherMedecins(medecins);
+fetchDoctors();

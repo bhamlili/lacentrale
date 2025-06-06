@@ -59,6 +59,36 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['cancel_appointment']))
     $stmt_cancel->close();
 }
 
+// Handle form submission for adding new appointment
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_appointment'])) {
+    $patient_name = $_POST['patient_name'];
+    $appointment_date = $_POST['appointment_date'];
+    $appointment_time = $_POST['appointment_time'];
+    $motif = $_POST['motif'];
+
+    // Combine date and time for the database
+    $appointment_datetime = $appointment_date . ' ' . $appointment_time;
+
+    // For simplicity, assuming patient name is unique or you'll handle patient creation/selection
+    // In a real app, you would likely have a way to link to an existing patient or create a new one.
+    // For this example, let's assume we have a patient with ID 1 for now.
+    // You would need to implement logic to find or create a patient based on the provided name.
+    $patient_id = 1; // Replace with actual patient ID lookup/creation logic
+
+    $sql_insert_appointment = "INSERT INTO appointments (doctor_id, patient_id, appointment_datetime, motif, status) VALUES (?, ?, ?, ?, 'scheduled')";
+    $stmt_insert_appointment = $conn->prepare($sql_insert_appointment);
+    // Assuming 'motif' column exists in 'appointments' table. If not, remove it from the query and bind_param
+    $stmt_insert_appointment->bind_param("iiss", $doctor_id, $patient_id, $appointment_datetime, $motif);
+
+    if ($stmt_insert_appointment->execute()) {
+        // Respond with success
+        echo json_encode(['success' => true, 'message' => 'Rendez-vous ajouté avec succès.']);
+    } else {
+        // Respond with error
+        echo json_encode(['success' => false, 'message' => 'Erreur lors de l\'ajout du rendez-vous: ' . $conn->error]);
+    }
+    $stmt_insert_appointment->close();
+}
 // Handle form submission for updating working hours
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_working_hours'])) {
     // Clear existing availability for the doctor
@@ -94,7 +124,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_working_hours']
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>MediRDV - Gestion des Rendez-vous</title>
+  <title>Gestion des Rendez-vous - LaCentrale.ma</title>
+  <style>
+    .alert {
+        padding: 10px; margin-bottom: 15px; border-radius: 4px;
+    }
+  </style>
   <link rel="stylesheet" href="style.css">
   
 </head>
@@ -141,6 +176,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_working_hours']
     $result_doctor_info = $conn->query($sql_doctor_info);
     $doctor_info = $result_doctor_info->fetch_assoc();
     ?>
+    <div id="statusMessage" class="alert" style="display: none;"></div>
     <section class="doctor-info-section" style="margin-top: 20px; padding: 20px; background-color: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
         <h3>Mes Informations</h3>
         <?php if (!empty($update_message)) { echo "<p style='color: green;'>$update_message</p>"; } ?>
@@ -279,9 +315,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_working_hours']
     <div class="modal-content">
       <span class="close" id="closeModal">&times;</span>
       <h3>Nouveau Rendez-vous</h3>
-      <form id="rdvForm">
+      <form id="rdvForm" method="POST" action="/gestion_med.php">
         <label>Nom du patient: <input type="text" id="nom" required></label>
-        <label>Date: <input type="date" id="date" required></label>
+        <label>Date: <input type="date" id="datePicker" required></label>
         <label>Heure: <input type="time" id="heure" required></label>
         <label>Motif: <input type="text" id="motif" required></label>
         <button type="submit">Ajouter</button>
