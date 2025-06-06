@@ -4,14 +4,7 @@ session_start();
 include 'config.php';
 
 // Database connection details
-$servername = "localhost";
-$username = "root"; // Replace with your database username
-$password = ""; // Replace with your database password
-$dbname = "lacentrale";
-
-// Check if the doctor is logged in
-if (!isset($_SESSION['doctor_id'])) {
-    header("Location: " . generate_url('connexion.php'));
+include 'db_config.php';
 
     // Add a connection to the database within this block if needed for redirection logic
     // (though typically session check is enough before any DB interaction related to the user)
@@ -70,8 +63,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_appointment'])) {
 
     // Combine date and time for the database
     $appointment_datetime = $appointment_date . ' ' . $appointment_time;
-
     // For simplicity, assuming patient name is unique or you'll handle patient creation/selection
+
     // In a real app, you would likely have a way to link to an existing patient or create a new one.
     // For this example, let's assume we have a patient with ID 1 for now.
     // You would need to implement logic to find or create a patient based on the provided name.
@@ -81,11 +74,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_appointment'])) {
     $stmt_insert_appointment = $conn->prepare($sql_insert_appointment);
     // Assuming 'motif' column exists in 'appointments' table. If not, remove it from the query and bind_param
     $stmt_insert_appointment->bind_param("iiss", $doctor_id, $patient_id, $appointment_datetime, $motif);
-
     if ($stmt_insert_appointment->execute()) {
-        // Respond with success
-        echo json_encode(['success' => true, 'message' => 'Rendez-vous ajouté avec succès.']);
+        // Redirect back to the gestion_med page after successful addition
+        $_SESSION['success_message'] = 'Rendez-vous ajouté avec succès.';
+        header("Location: " . generate_url('gestion_med.php'));
+        exit();
     } else {
+        $_SESSION['error_message'] = 'Erreur lors de l\'ajout du rendez-vous: ' . $conn->error;
         // Respond with error
         echo json_encode(['success' => false, 'message' => 'Erreur lors de l\'ajout du rendez-vous: ' . $conn->error]);
     }
@@ -161,8 +156,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_working_hours']
    <div class="doctor-info" style="color: white;">
         Bonjour, Dr. <?php echo $doctor['name']; ?> (<?php echo $doctor['specialty']; ?>)
    </div>
-    <?php
+ <?php
       }
+      // Close the connection used for header info
       $conn->close();
     ?>
   </header>
@@ -178,6 +174,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_working_hours']
     $result_doctor_info = $conn->query($sql_doctor_info);
     $doctor_info = $result_doctor_info->fetch_assoc();
     ?>
+    <?php if (isset($_SESSION['success_message'])): ?>
+        <div class="alert alert-success"><?php echo $_SESSION['success_message']; unset($_SESSION['success_message']); ?></div>
+    <?php endif; ?>
+    <?php if (isset($_SESSION['error_message'])): ?>
+        <div class="alert alert-danger"><?php echo $_SESSION['error_message']; unset($_SESSION['error_message']); ?></div>
+    <?php endif; ?>
     <div id="statusMessage" class="alert" style="display: none;"></div>
     <section class="doctor-info-section" style="margin-top: 20px; padding: 20px; background-color: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
         <h3>Mes Informations</h3>
@@ -260,8 +262,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_working_hours']
     <button type="button" id="saveDispoBtn">Enregistrer</button>
   </form>
 </section>
-
-
   <main>
     <h2>Liste des Rendez-vous</h2>
     <button id="addBtn">+ Nouveau Rendez-vous</button>
@@ -275,11 +275,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_working_hours']
         </tr>
       </thead>
       <tbody id="rdvTable">
-        <?php
-        $conn = new mysqli($servername, $username, $password, $dbname);
-        if ($conn->connect_error) {
-            die("Connection failed: " . $conn->connect_error);
-        }
 
         $sql_appointments = "SELECT a.appointment_id, p.name AS patient_name, a.appointment_datetime, a.status
                              FROM appointments a
@@ -317,10 +312,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_working_hours']
     <div class="modal-content">
       <span class="close" id="closeModal">&times;</span>
       <h3>Nouveau Rendez-vous</h3> <?php /* This form was updated in a previous step to submit via JS fetch */ ?>
-      <form id="rdvForm" method="POST" action="/gestion_med.php">
-        <label>Nom du patient: <input type="text" id="nom" required></label>
-        <label>Date: <input type="date" id="datePicker" required></label>
-        <label>Heure: <input type="time" id="heure" required></label>
+      <form id="rdvForm" method="POST" action="">
+        <input type="hidden" name="add_appointment" value="1">
+        <label>Nom du patient: <input type="text" id="patient_name" name="patient_name" required></label>
+        <label>Date: <input type="date" id="appointment_date" name="appointment_date" required></label>
+        <label>Heure: <input type="time" id="appointment_time" name="appointment_time" required></label>
         <label>Motif: <input type="text" id="motif" required></label>
         <button type="submit">Ajouter</button>
       </form>
@@ -473,104 +469,19 @@ form label {
 
 </style>
 
+
 <script>
-
+    // Javascript for controlling the modal display
     const saveDispoBtn = document.getElementById("saveDispoBtn");
-const dispoDayRows = document.querySelectorAll(".dispo-day");
-
-dispoDayRows.forEach(row => {
-  const checkbox = row.querySelector("input[type='checkbox']");
-  const start = row.querySelector(".start");
-  const end = row.querySelector(".end");
-
-  checkbox.addEventListener("change", () => {
-    const isChecked = checkbox.checked;
-    start.disabled = !isChecked;
-    end.disabled = !isChecked;
-  });
-});
-
-saveDispoBtn.addEventListener("click", () => {
-  const disponibilites = [];
-
-  dispoDayRows.forEach(row => {
-    const checkbox = row.querySelector("input[type='checkbox']");
-    const start = row.querySelector(".start").value;
-    const end = row.querySelector(".end").value;
-    if (checkbox.checked && start && end) {
-      disponibilites.push({
-        jour: row.dataset.day,
-        jourIndex: checkbox.value,
-        debut: start,
-        fin: end
-      });
-    }
-  });
-
-  console.log("Disponibilités enregistrées :", disponibilites);
-
-  alert("Disponibilités sauvegardées (simulation)");
-});
-
     const addBtn = document.getElementById("addBtn");
-const modal = document.getElementById("modal");
-const closeModal = document.getElementById("closeModal");
-const form = document.getElementById("rdvForm");
-const rdvTable = document.getElementById("rdvTable");
-const dispoForm = document.getElementById("dispoForm");
-const dateInput = document.getElementById("date");
+    const modal = document.getElementById("modal");
+    const closeModal = document.getElementById("closeModal");
 
 // Ouvrir/fermer la modale
 addBtn.onclick = () => {
   modal.style.display = "flex";
-  updateDatePickerAvailability();
 };
-
 closeModal.onclick = () => {
   modal.style.display = "none";
 };
-
-// Ajouter un RDV
-form.onsubmit = (e) => {
-  e.preventDefault();
-
-  const nom = document.getElementById("nom").value;
-  const date = document.getElementById("date").value;
-  const heure = document.getElementById("heure").value;
-  const motif = document.getElementById("motif").value;
-
-  const row = document.createElement("tr");
-  row.innerHTML = `<td>${nom}</td><td>${date}</td><td>${heure}</td><td>${motif}</td>`;
-  rdvTable.appendChild(row);
-
-  form.reset();
-  modal.style.display = "none";
-};
-
-// Obtenir les jours cochés
-function getJoursDisponibles() {
-  const checkboxes = dispoForm.querySelectorAll("input[type='checkbox']");
-  return Array.from(checkboxes)
-    .filter(chk => chk.checked)
-    .map(chk => parseInt(chk.value));
-}
-
-// Valider que la date sélectionnée est disponible
-function updateDatePickerAvailability() {
-  const joursDisponibles = getJoursDisponibles();
-
-  dateInput.oninput = () => {
-    const selectedDate = new Date(dateInput.value);
-    const day = selectedDate.getDay(); // 0 (dim) à 6 (sam)
-
-    if (!joursDisponibles.includes(day)) {
-      alert("Ce jour n’est pas disponible pour les rendez-vous !");
-      dateInput.value = '';
-    }
-  };
-}
-
-// Recalcul si les jours changent
-dispoForm.onchange = updateDatePickerAvailability;
-
 </script>

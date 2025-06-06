@@ -2,8 +2,14 @@
 include 'config.php';
 include './db_config.php';
 
+// Use the database connection from db_config.php
+$conn = $link; // Assign $link to $conn for consistency
+
 // Get doctor ID from URL
 $doctor_id = isset($_GET['doctor_id']) ? intval($_GET['doctor_id']) : 0;
+
+$doctor = null;
+$availability = [];
 
 if ($doctor_id > 0) {
     // Fetch doctor information
@@ -14,8 +20,7 @@ if ($doctor_id > 0) {
     $doctor = $doctor_result->fetch_assoc();
 
     // Fetch doctor's regular working hours
-    $availability_sql = "SELECT day_of_week, start_time, end_time FROM doctor_availability WHERE doctor_id = ?";
-    $availability_stmt = $link->prepare($availability_sql);    $availability_stmt->bind_param("i", $doctor_id);
+    $availability_stmt = $conn->prepare("SELECT day_of_week, start_time, end_time FROM doctor_availability WHERE doctor_id = ?");    $availability_stmt->bind_param("i", $doctor_id);
     $availability_stmt->execute();
     $availability_result = $availability_stmt->get_result();
     $availability = [];
@@ -24,8 +29,7 @@ if ($doctor_id > 0) {
     }
 
     // Fetch existing appointments for this doctor
-    $appointments_sql = "SELECT appointment_datetime FROM appointments WHERE doctor_id = ? AND status = 'scheduled'";    $appointments_stmt = $link->prepare($appointments_sql);
-    $appointments_stmt->bind_param("i", $doctor_id);
+    $appointments_stmt = $conn->prepare("SELECT appointment_datetime FROM appointments WHERE doctor_id = ? AND status = 'scheduled'");    $appointments_stmt->bind_param("i", $doctor_id);
     $appointments_stmt->execute();
     $appointments_result = $appointments_stmt->get_result();
     $existing_appointments = [];
@@ -35,16 +39,15 @@ if ($doctor_id > 0) {
 
     $doctor_stmt->close();
     $availability_stmt->close();
-} else {
-    // Redirect if no doctor ID is provided    // Redirect if no doctor ID is provided
-    header("Location: /index.php"); // Use absolute path
- header("Location: " . generate_url('index.php'));
 }
 
 // Close connection
-$link->close();
-?>
-<!DOCTYPE html>
+$conn->close();
+
+if ($doctor_id <= 0 || !$doctor) {
+    // Redirect if no doctor ID is provided    // Redirect if no doctor ID is provided
+    header("Location: /index.php"); // Use absolute path
+ header("Location: " . generate_url('index.php'));
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
@@ -100,7 +103,7 @@ $link->close();
   </style>
 </head>
 <body>
-
+<?php if ($doctor): ?>
   <h1>Agenda de <?php echo htmlspecialchars($doctor['name']); ?></h1>
   <p>Spécialité: <?php echo htmlspecialchars($doctor['specialty']); ?></p>
   <h2>Choisissez une date de rendez-vous</h2>
@@ -108,33 +111,51 @@ $link->close();
   <div class="agenda-container" id="agenda"></div>
 
 
+  <?php
+    $jours = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+    $mois = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+
+    // Determine available dates based on availability (simplified example - you would need to expand this)
+    $joursDisponibles = [];
+    $today = new DateTime();
+    // Generate dates for the next 30 days as an example
+    for ($i = 0; $i < 30; $i++) {
+        $date = clone $today;
+        $date->modify("+{$i} days");
+        $joursDisponibles[] = $date->format('Y-m-d');
+    }
+
+    foreach ($joursDisponibles as $dateStr):
+      $date = new DateTime($dateStr);
+      $jourNom = $jours[$date->format('w')]; // 'w' gives day of week 0-6
+      $jourNum = $date->format('d');
+      $moisNom = $mois[$date->format('n') - 1]; // 'n' gives month 1-12
+      $annee = $date->format('Y');
+
+      // You would need more complex logic here to check if this date is actually available
+      // based on doctor_availability and existing_appointments.
+      // For now, we'll just display all generated dates.
+      $is_available = true; // Placeholder for actual availability check
+
+      if ($is_available):
+  ?>
+        <div class="day-card" onclick="window.location.href = '<?php echo generate_url('reservation.php'); ?>?doctor_id=<?php echo $doctor_id; ?>&datetime=<?php echo urlencode($dateStr); ?>'">
+          <div class="jour"><?php echo htmlspecialchars($jourNom); ?></div>
+          <div class="date"><?php echo htmlspecialchars("{$jourNum} {$moisNom} {$annee}"); ?></div>
+        </div>
+  <?php
+      endif;
+    endforeach;
+  ?>
+
+<?php else: ?>
+    <p>Impossible de charger l'agenda pour le médecin spécifié.</p>
+<?php endif; ?>
+
   <script>
-    const jours = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
-    const mois = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
-
-    const joursDisponibles = ["2025-06-03", "2025-06-05", "2025-06-07", "2025-06-10"];
-    const agendaDiv = document.getElementById("agenda");
-
-    joursDisponibles.forEach(dateStr => {
-      const date = new Date(dateStr);
-      const jourNom = jours[date.getDay()];
-      const jourNum = date.getDate();
-      const moisNom = mois[date.getMonth()];
-      const annee = date.getFullYear();
-
-      const card = document.createElement("div");
-      card.className = "day-card";
-      card.innerHTML = `
-        <div class="jour">${jourNom}</div>
-        <div class="date">${jourNum} ${moisNom} ${annee}</div>
-      `;
-      card.onclick = () => {
-        window.location.href = `<?php echo generate_url('reservation.php'); ?>?medecin=...&jour=...&heure=...`;
-      };
-
-      agendaDiv.appendChild(card);
-    });
-    
+    // This script can now be used for client-side interactions like modal toggles
+    // or other dynamic elements that don't require fetching core agenda data.
+    // The hardcoded data and fetching logic have been moved to PHP.
   </script>
   
 

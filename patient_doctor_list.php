@@ -37,8 +37,7 @@ $conn->close();
     </nav>
   </header>
 
-  <section class="search-section">
-    <input type="text" id="searchInput" placeholder="Rechercher un médecin..." />
+ <section class="search-section" style="display: none;">    <input type="text" id="searchInput" placeholder="Rechercher un médecin..." />
     <button onclick="rechercher()">Rechercher</button>
   </section>
 
@@ -59,6 +58,5 @@ $conn->close();
     </div>
   </main>
 
-  <script src="js/script.js"></script>
 </body>
 </html>
