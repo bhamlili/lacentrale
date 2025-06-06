@@ -1,18 +1,7 @@
 <?php
-// Database connection details (replace with your actual credentials)
-include '/lacentrale/config.php';
-$servername = "localhost";
-$username = "root";
-$password = "password";
-$dbname = "medical_appointments";
+include './db_config.php';
+include './config.php';
 
-// Create connection
-$conn = new mysqli($servername, $username, $password, $dbname);
-
-// Check connection
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
 
 // Fetch doctors from the database
 $sql = "SELECT doctor_id, name, specialty FROM doctors";
