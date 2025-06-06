@@ -3,9 +3,9 @@ session_start();
 
 // Database connection details
 $servername = "localhost";
-$username = "your_db_username"; // Replace with your database username
-$password = "your_db_password"; // Replace with your database password
-$dbname = "medical_appointments";
+$username = "root"; // Replace with your database username
+$password = ""; // Replace with your database password
+$dbname = "lacentrale";
 
 // Check if the doctor is logged in
 if (!isset($_SESSION['doctor_id'])) {

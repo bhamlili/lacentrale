@@ -1,5 +1,5 @@
 <?php
-include '/app/db_config.php';
+include './db_config.php';
 
 // Get doctor ID from URL
 $doctor_id = isset($_GET['doctor_id']) ? intval($_GET['doctor_id']) : 0;
