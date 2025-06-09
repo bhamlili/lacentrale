@@ -547,6 +547,16 @@ button {
   border: none;
   padding: 10px 15px;
   cursor: pointer;
+}
+
+.book-appointment-button {
+  display: block; /* Make it a block element */
+  width: 100%; /* Take up full width */
+  background-color: #3498db; /* Professional blue */
+  color: white; /* White text */
+  padding: 12px 20px; /* Add padding */
+  text-align: center; /* Center the text */
+  text-decoration: none; /* Remove underline */
   border-radius: 5px; /* Keep existing border radius */
 }
 

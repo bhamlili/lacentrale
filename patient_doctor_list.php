@@ -21,6 +21,7 @@ sort($specialties);
 // Assuming generate_url function exists in config.php
 
 
+
 $conn->close();
 ?>
 <!DOCTYPE html>
@@ -32,19 +33,19 @@ $conn->close();
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
-  <header class="header">
-    <div class="logo">LaCentrale<span class="dot">.</span><span class="ma">ma</span></div>
-    <nav>
-      <ul>
-        <li><a href="#">Médecin généraliste</a></li>
- <li><a href="#">Dentiste</a></li>
- <li><a href="#">Pédiatre</a></li>
- <li><a href="#" class="btn-pink">Nous rejoindre</a></li>
-      </ul>
-    </nav>
-  </header>
+<header class="header">
+<div class="logo">LaCentrale<span class="dot">.</span><span class="ma">ma</span></div>
+<div class="header-controls">
 
-  <section class="filter-section">
+<nav>
+<ul>
+<li><a href="/patient_signup.php" class="btn-pink">Nous rejoindre</a></li>
+</ul>
+</nav>
+</div>
+</header>
+
+<section class="filter-section">
     <label for="specialtyFilter">Filtrer par spécialité:</label>
     <select id="specialtyFilter">
       <option value="all">Toutes les spécialités</option>
@@ -55,19 +56,17 @@ $conn->close();
   </section>
 
 
-
-
-
-  <main>
+<main>
     <h2 class="section-title">Médecins disponibles à Fès</h2>
     <div id="doctor-list" class="doctor-list">
       <?php if (!empty($doctors)): ?>
         <?php foreach ($doctors as $doctor): ?>
           <div class="doctor-card">
- <div class="professional" data-specialty="<?php echo htmlspecialchars($doctor['specialty']); ?>">
+<div class="professional" data-specialty="<?php echo htmlspecialchars($doctor['specialty']); ?>">
             <h3><?php echo htmlspecialchars($doctor['name']); ?></h3>
+
             <p><?php echo htmlspecialchars($doctor['specialty']); ?></p>
-            <a href="<?php echo generate_url('agenda.php?doctor_id=' . $doctor['doctor_id']); ?>">Voir le profil et prendre rendez-vous</a>
+            <a href="<?php echo generate_url('agenda.php?doctor_id=' . $doctor['doctor_id']); ?>" class="book-appointment-button">Voir le profil et prendre rendez-vous</a>
  </div>
           </div>
         <?php endforeach; ?>
@@ -76,7 +75,7 @@ $conn->close();
       <?php endif; ?>
     </div>
   </main>
- <script>
+<script>
     document.getElementById('specialtyFilter').addEventListener('change', function() {
       var selectedSpecialty = this.value;
       var doctors = document.querySelectorAll('.professional');
