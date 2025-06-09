@@ -14,6 +14,13 @@ if ($result->num_rows > 0) {
     }
 }
 
+// Get unique specialties for the dropdown
+$specialties = array_unique(array_column($doctors, 'specialty'));
+sort($specialties);
+
+// Assuming generate_url function exists in config.php
+
+
 $conn->close();
 ?>
 <!DOCTYPE html>
@@ -37,9 +44,19 @@ $conn->close();
     </nav>
   </header>
 
- <section class="search-section" style="display: none;">    <input type="text" id="searchInput" placeholder="Rechercher un médecin..." />
-    <button onclick="rechercher()">Rechercher</button>
+  <section class="filter-section">
+    <label for="specialtyFilter">Filtrer par spécialité:</label>
+    <select id="specialtyFilter">
+      <option value="all">Toutes les spécialités</option>
+      <?php foreach ($specialties as $specialty): ?>
+        <option value="<?php echo htmlspecialchars($specialty); ?>"><?php echo htmlspecialchars($specialty); ?></option>
+      <?php endforeach; ?>
+    </select>
   </section>
+
+
+
+
 
   <main>
     <h2 class="section-title">Médecins disponibles à Fès</h2>
@@ -47,9 +64,11 @@ $conn->close();
       <?php if (!empty($doctors)): ?>
         <?php foreach ($doctors as $doctor): ?>
           <div class="doctor-card">
+ <div class="professional" data-specialty="<?php echo htmlspecialchars($doctor['specialty']); ?>">
             <h3><?php echo htmlspecialchars($doctor['name']); ?></h3>
             <p><?php echo htmlspecialchars($doctor['specialty']); ?></p>
             <a href="<?php echo generate_url('agenda.php?doctor_id=' . $doctor['doctor_id']); ?>">Voir le profil et prendre rendez-vous</a>
+ </div>
           </div>
         <?php endforeach; ?>
       <?php else: ?>
@@ -57,6 +76,21 @@ $conn->close();
       <?php endif; ?>
     </div>
   </main>
+ <script>
+    document.getElementById('specialtyFilter').addEventListener('change', function() {
+      var selectedSpecialty = this.value;
+      var doctors = document.querySelectorAll('.professional');
+
+      doctors.forEach(function(doctor) {
+        var doctorSpecialty = doctor.getAttribute('data-specialty');
+        if (selectedSpecialty === 'all' || doctorSpecialty === selectedSpecialty) {
+          doctor.style.display = 'block';
+        } else {
+          doctor.style.display = 'none';
+        }
+      });
+    });
+  </script>
 
 </body>
 </html>
