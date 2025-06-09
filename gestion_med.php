@@ -6,11 +6,6 @@ include 'config.php';
 // Database connection details
 include 'db_config.php';
 
-    // Add a connection to the database within this block if needed for redirection logic
-    // (though typically session check is enough before any DB interaction related to the user)
-
-    exit();
-}
 
 // Fetch doctor information
 $doctor_id = $_SESSION['doctor_id'];
@@ -115,7 +110,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_working_hours']
         $stmt_insert_availability->close();
     }
 }
-
+?>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -135,8 +130,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_working_hours']
     <div class="logo">LaCentrale<span class="dot">.</span><span class="ma">ma</span></div>
     <nav>
      <?php
-      $conn = new mysqli($servername, $username, $password, $dbname);
-      if ($conn->connect_error) {git
+      if ($conn->connect_error) {
          die("Connection failed: " . $conn->connect_error);
       }
 
@@ -165,14 +159,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_working_hours']
 
   <main>
    <?php
-    $conn = new mysqli($servername, $username, $password, $dbname);
    if ($conn->connect_error) {
         die("Connection failed: " . $conn->connect_error);
     }
 
     $sql_doctor_info = "SELECT specialty, contact_info FROM doctors WHERE doctor_id = $doctor_id";
     $result_doctor_info = $conn->query($sql_doctor_info);
-    $doctor_info = $result_doctor_info->fetch_assoc();
+    //$doctor_info = $result_doctor_info->fetch_assoc();
     ?>
     <?php if (isset($_SESSION['success_message'])): ?>
         <div class="alert alert-success"><?php echo $_SESSION['success_message']; unset($_SESSION['success_message']); ?></div>

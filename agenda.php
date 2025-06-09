@@ -46,8 +46,11 @@ $conn->close();
 
 if ($doctor_id <= 0 || !$doctor) {
     // Redirect if no doctor ID is provided    // Redirect if no doctor ID is provided
-    header("Location: /index.php"); // Use absolute path
+  header("Location: /index.php"); // Use absolute path
  header("Location: " . generate_url('index.php'));
+}
+ ?>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
