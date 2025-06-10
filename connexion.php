@@ -4,8 +4,6 @@ session_start();
 require_once __DIR__ . '/db_config.php';
 
 $loginError = "";
-$signupSuccess = "";
-$signupError = "";
 
 // Handle Login
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['login_submit'])) {
@@ -37,30 +35,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['login_submit'])) {
     $stmt->close();
 }
 
-// Handle Signup
-if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['signup_submit'])) {
-    $name = $_POST['signup_name'];
-    $specialty = $_POST['signup_specialty'];
-    $contact_info = $_POST['signup_contact_info'];
-    $username = $_POST['signup_username'];
-    $password = $_POST['signup_password'];
-
-    // Hash the password
-    $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-
-    // Prepare and execute the insert query
-    $stmt = $link->prepare("INSERT INTO doctors (name, specialty, contact_info, username, password) VALUES (?, ?, ?, ?, ?)");
-    $stmt->bind_param("sssss", $name, $specialty, $contact_info, $username, $hashed_password);
-
-    if ($stmt->execute()) {
-        $signupSuccess = "Inscription réussie ! Vous pouvez maintenant vous connecter.";
-    } else {
-        $signupError = "Erreur lors de l'inscription : " . $stmt->error;
-    }
-
-    $stmt->close();
-}
-
 mysqli_close($link);
 ?>
 <!DOCTYPE html>
@@ -70,127 +44,130 @@ mysqli_close($link);
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Connexion Médecin - LaCentrale.ma</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css" />
+  <style>
+        body {
+            background: url('img/medecin.jpg') no-repeat center center fixed;
+            background-size: cover;
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        main {
+            width: 600px;
+            max-width: 90%;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px 50px;
+            border-radius: 25px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+            backdrop-filter: blur(5px);
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .login-logo {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .login-logo img {
+            height: 220px;  /* Augmenté de 180px à 220px */
+            width: auto;
+            margin-bottom: 15px;
+        }
+
+        .login-title {
+            font-size: 32px;
+            text-align: center;
+            color: #05668d;
+            margin-bottom: 40px;
+            font-weight: 700;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 15px;
+            border-radius: 12px;
+            border: 2px solid #e0e0e0;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus {
+            border-color: #05668d;
+            outline: none;
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 18px;
+            background-color: #0077b6;  /* Changé de #02c39a à #0077b6 */
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 20px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            margin-top: 30px;
+        }
+
+        .login-btn:hover {
+            background-color: #005f8d;  /* Changé de #00a883 à #005f8d */
+        }
+
+        <?php if (!empty($loginError)): ?>
+        .error-message {
+            color: #f50a6e;
+            margin: 20px 0;
+            text-align: center;
+            font-weight: 600;
+        }
+        <?php endif; ?>
+    </style>
 </head>
 <body>
+    <main>
+        <div class="login-logo">
+            <img src="img/la centrale1.png" alt="LaCentrale.ma">
+        </div>
 
-  <header class="header">
-    <div class="logo">
-      LaCentrale<span class="dot">.</span><span class="ma">ma</span>
-    </div>
-  </header>
+        <form id="loginForm" method="POST" action="" novalidate>
+            <div class="form-group">
+                <label for="username">Nom d'utilisateur</label>
+                <input type="text" id="username" name="username" placeholder="Entrez votre nom d'utilisateur" required />
+            </div>
 
-  <main style="max-width: 400px; margin: 80px auto; background: white; padding: 40px 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
-    <h2 style="text-align:center; color:#05668d; margin-bottom: 30px; font-weight: 700;">Connexion Médecin</h2>
+            <div class="form-group">
+                <label for="password">Mot de passe</label>
+                <input type="password" id="password" name="password" placeholder="Entrez votre mot de passe" required />
+            </div>
 
-    <form id="loginForm" method="POST" action="" novalidate>
+            <?php if (!empty($loginError)): ?>
+                <div class="error-message"><?php echo $loginError; ?></div>
+            <?php endif; ?>
 
-      <label for="username" style="font-weight: 600; color: #333;">Nom d'utilisateur</label>
-      <input
-        type="text"
-        id="username"
-        name="username"
-        placeholder="Entrez votre nom d'utilisateur"
-        required
-        style="width: 100%; padding: 12px; margin-top: 6px; border-radius: 8px; border: 1.5px solid #ccc; font-size: 16px;"
-      />
-
-      <label for="password" style="font-weight: 600; color: #333; margin-top: 25px; display: block;">Mot de passe</label>
-      <input
-        type="password"
-        id="password"
-        name="password"
-        placeholder="Entrez votre mot de passe"
-        required
-        style="width: 100%; padding: 12px; margin-top: 6px; border-radius: 8px; border: 1.5px solid #ccc; font-size: 16px;"
-      />
-
-      <?php if (!empty($loginError)): ?>
-        <div style="color: #f50a6e; margin-top: 18px; text-align:center; font-weight: 600;"><?php echo $loginError; ?></div>
-      <?php endif; ?>
-
-      <button
-        type="submit"
-        name="login_submit"
-        style="margin-top: 35px; width: 100%; background-color: #02c39a; color: white; padding: 14px; border: none; border-radius: 8px; font-weight: 700; font-size: 18px; cursor: pointer; transition: background-color 0.3s ease;"
-        onmouseover="this.style.backgroundColor='#00a883'"
-        onmouseout="this.style.backgroundColor='#02c39a'"
-      >
-        Se connecter
-      </button>
-    </form>
-
-    <h2 style="text-align:center; color:#05668d; margin-top: 60px; margin-bottom: 30px; font-weight: 700;">Inscription Médecin</h2>
-
-    <?php if (!empty($signupSuccess)): ?>
-      <div style="color: #02c39a; margin-top: 18px; text-align:center; font-weight: 600;"><?php echo $signupSuccess; ?></div>
-    <?php endif; ?>
-
-    <?php if (!empty($signupError)): ?>
-      <div style="color: #f50a6e; margin-top: 18px; text-align:center; font-weight: 600;"><?php echo $signupError; ?></div>
-    <?php endif; ?>
-
-    <form id="signupForm" method="POST" action="" novalidate>
-      <label for="signup_name" style="font-weight: 600; color: #333;">Nom complet</label>
-      <input
-        type="text"
-        id="signup_name"
-        name="signup_name"
-        placeholder="Entrez votre nom complet"
-        required
-        style="width: 100%; padding: 12px; margin-top: 6px; border-radius: 8px; border: 1.5px solid #ccc; font-size: 16px;"
-      />
-
-      <label for="signup_specialty" style="font-weight: 600; color: #333; margin-top: 25px; display: block;">Spécialité</label>
-      <input
-        type="text"
-        id="signup_specialty"
-        name="signup_specialty"
-        placeholder="Entrez votre spécialité"
-        style="width: 100%; padding: 12px; margin-top: 6px; border-radius: 8px; border: 1.5px solid #ccc; font-size: 16px;"
-      />
-
-      <label for="signup_contact_info" style="font-weight: 600; color: #333; margin-top: 25px; display: block;">Informations de contact</label>
-      <input
-        type="text"
-        id="signup_contact_info"
-        name="signup_contact_info"
-        placeholder="Entrez vos informations de contact"
-        style="width: 100%; padding: 12px; margin-top: 6px; border-radius: 8px; border: 1.5px solid #ccc; font-size: 16px;"
-      />
-
-      <label for="signup_username" style="font-weight: 600; color: #333; margin-top: 25px; display: block;">Nom d'utilisateur</label>
-      <input
-        type="text"
-        id="signup_username"
-        name="signup_username"
-        placeholder="Choisissez un nom d'utilisateur"
-        required
-        style="width: 100%; padding: 12px; margin-top: 6px; border-radius: 8px; border: 1.5px solid #ccc; font-size: 16px;"
-      />
-
-      <label for="signup_password" style="font-weight: 600; color: #333; margin-top: 25px; display: block;">Mot de passe</label>
-      <input
-        type="password"
-        id="signup_password"
-        name="signup_password"
-        placeholder="Choisissez un mot de passe"
-        required
-        style="width: 100%; padding: 12px; margin-top: 6px; border-radius: 8px; border: 1.5px solid #ccc; font-size: 16px;"
-      />
-
-      <button
-        type="submit"
-        name="signup_submit"
-        style="margin-top: 35px; width: 100%; background-color: #05668d; color: white; padding: 14px; border: none; border-radius: 8px; font-weight: 700; font-size: 18px; cursor: pointer; transition: background-color 0.3s ease;"
-        onmouseover="this.style.backgroundColor='#034f72'"
-        onmouseout="this.style.backgroundColor='#05668d'"
-      >
-        S'inscrire
-      </button>
-
-    </form>
-  </main>
-
+            <button type="submit" name="login_submit" class="login-btn">Se connecter</button>
+        </form>
+    </main>
 </body>
 </html>

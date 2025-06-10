@@ -1,100 +1,202 @@
+<?php
+include './db_config.php';
+include './config.php';
+
+$message = '';
+
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $name = $_POST['name'];
+    $email = $_POST['email'];
+    $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
+    $phone = $_POST['phone'];
+
+    $sql = "INSERT INTO patients (name, email, password, phone) VALUES (?, ?, ?, ?)";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("ssss", $name, $email, $password, $phone);
+    
+    if ($stmt->execute()) {
+        $message = "Inscription réussie! Vous pouvez maintenant vous connecter.";
+    } else {
+        $message = "Erreur lors de l'inscription: " . $conn->error;
+    }
+}
+?>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Patient Signup</title>
-  <link rel="stylesheet" href="css/style.css" />
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f4f4f4;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-      margin: 0;
-    }
-    .signup-container {
-      background-color: #fff;
-      padding: 30px;
-      border-radius: 8px;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-      width: 350px;
-      text-align: center;
-    }
-    .signup-container h2 {
-      margin-bottom: 20px;
-      color: #333;
-    }
-    .form-group {
-      margin-bottom: 15px;
-      text-align: left;
-    }
-    .form-group label {
-      display: block;
-      margin-bottom: 5px;
-      font-weight: bold;
-      color: #555;
-    }
-    .form-group input[type="email"],
-    .form-group input[type="password"] {
-      width: calc(100% - 22px);
-      padding: 10px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      font-size: 16px;
-    }
-    button {
-      background-color: #3498db;
-      color: white;
-      padding: 10px 20px;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 16px;
-      transition: background-color 0.3s ease;
-      width: 100%;
-      margin-bottom: 10px;
-    }
-    button:hover {
-      background-color: #2980b9;
-    }
-    .google-signup, .gmail-signup {
-      display: block;
-      width: 100%;
-      padding: 10px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      text-decoration: none;
-      color: #555;
-      background-color: #eee;
-      margin-bottom: 10px;
-      transition: background-color 0.3s ease;
-    }
-    .google-signup:hover, .gmail-signup:hover {
-      background-color: #ddd;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <title>Inscription Patient - LaCentrale.ma</title>
+    <link rel="stylesheet" href="css/style.css" />
+    <style>
+        header {
+            background-color: #0077b6;
+            padding: 15px 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+        }
+
+        .logo img {
+            height: 60px; /* Augmenter la taille du logo */
+            width: auto;
+            margin-right: 10px;
+        }
+
+        body {
+          font-family: Arial, sans-serif;
+          background-color: #f4f4f4;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          min-height: 100vh;
+          margin: 0;
+          padding-top: 80px;  /* Pour compenser la hauteur du header fixe */
+        }
+        .signup-container {
+          background-color: #fff;
+          padding: 30px;
+          border-radius: 8px;
+          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+          width: 350px;
+          text-align: center;
+        }
+        .signup-container h2 {
+          margin-bottom: 20px;
+          color: #333;
+        }
+        .form-group {
+          margin-bottom: 15px;
+          text-align: left;
+        }
+        .form-group label {
+          display: block;
+          margin-bottom: 5px;
+          font-weight: bold;
+          color: #555;
+        }
+        .form-group input[type="email"],
+        .form-group input[type="password"],
+        .form-group input[type="text"],
+        .form-group input[type="tel"] {
+          width: calc(100% - 22px);
+          padding: 10px;
+          border: 1px solid #ddd;
+          border-radius: 4px;
+          font-size: 16px;
+        }
+        button {
+          background-color: #3498db;
+          color: white;
+          padding: 10px 20px;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+          font-size: 16px;
+          transition: background-color 0.3s ease;
+          width: 100%;
+          margin-bottom: 10px;
+        }
+        button:hover {
+          background-color: #2980b9;
+        }
+        .google-signup, .gmail-signup {
+          display: block;
+          width: 100%;
+          padding: 10px;
+          border: 1px solid #ddd;
+          border-radius: 4px;
+          text-decoration: none;
+          color: #555;
+          background-color: #eee;
+          margin-bottom: 10px;
+          transition: background-color 0.3s ease;
+        }
+        .google-signup:hover, .gmail-signup:hover {
+          background-color: #ddd;
+        }
+        .message {
+          margin-bottom: 20px;
+          padding: 10px;
+          background-color: #dff0d8;
+          color: #3c763d;
+          border: 1px solid #d6e9c6;
+          border-radius: 4px;
+        }
+
+        .btn-pink {
+            background-color: #ff4081;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: bold;
+            border: none;
+            transition: all 0.3s ease;
+            display: inline-block;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .btn-pink:hover {
+            background-color: #e91e63;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        nav ul li {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+    </style>
 </head>
 <body>
+    <header>
+        <div class="logo">
+            <img src="img/la centrale1.png" alt="LaCentrale.ma">
+        </div>
+    </header>
 
-  <div class="signup-container">
+    <div class="signup-container">
     <h2>Patient Signup</h2>
+    <?php if ($message): ?>
+        <div class="message"><?php echo $message; ?></div>
+    <?php endif; ?>
+    
     <form action="" method="post">
+      <div class="form-group">
+        <label for="name">Nom complet:</label>
+        <input type="text" id="name" name="name" required>
+      </div>
       <div class="form-group">
         <label for="email">Email:</label>
         <input type="email" id="email" name="email" required>
       </div>
       <div class="form-group">
-        <label for="password">Password:</label>
+        <label for="password">Mot de passe:</label>
         <input type="password" id="password" name="password" required>
       </div>
-      <button type="submit">Sign Up</button>
+      <div class="form-group">
+        <label for="phone">Téléphone:</label>
+        <input type="tel" id="phone" name="phone" required>
+      </div>
+      <button type="submit">S'inscrire</button>
     </form>
-    <p>- OR -</p>
+    <p>- OU -</p>
     <a href="#" class="google-signup">Sign Up with Google</a>
     <a href="#" class="gmail-signup">Sign Up with Gmail</a>
+    <br>
+    <a href="login.php" class="btn-pink">Nous rejoindre</a>
   </div>
 
 </body>

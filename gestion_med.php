@@ -110,371 +110,645 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_working_hours']
         $stmt_insert_availability->close();
     }
 }
+
+// Remplacer le handler existant par celui-ci
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['save_availability'])) {
+    $date_calendrier = $_POST['date_calendrier'];
+    $heure_calendrier = $_POST['heure_calendrier'];
+
+    $sql = "INSERT INTO calendrier (date_calendrier, heure_calendrier) VALUES (?, ?)";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("ss", $date_calendrier, $heure_calendrier);
+    
+    if ($stmt->execute()) {
+        echo "<script>alert('Disponibilité ajoutée avec succès');</script>";
+    } else {
+        echo "<script>alert('Erreur lors de l'ajout');</script>";
+    }
+    $stmt->close();
+}
+
+// Ajouter ce handler en haut du fichier avec les autres handlers POST
+if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['section']) && $_GET['section'] == 'rdv') {
+    header('Content-Type: application/json');
+    $sql = "SELECT a.appointment_id, 
+            p.name AS patient_name,
+            p.phone AS patient_phone, 
+            a.appointment_datetime,
+            a.status,
+            a.motif,
+            d.name AS doctor_name,
+            d.specialty
+            FROM appointments a
+            JOIN patients p ON a.patient_id = p.patient_id
+            JOIN doctors d ON a.doctor_id = d.doctor_id
+            WHERE a.doctor_id = ? 
+            AND a.status = 'scheduled'
+            ORDER BY a.appointment_datetime ASC";
+    
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("i", $_SESSION['doctor_id']);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    $appointments = [];
+    while ($row = $result->fetch_assoc()) {
+        $appointments[] = $row;
+    }
+    
+    echo json_encode($appointments);
+    exit();
+}
 ?>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Gestion des Rendez-vous - LaCentrale.ma</title>
-  <style>
-    .alert {
-        padding: 10px; margin-bottom: 15px; border-radius: 4px;
-    }
-  </style>
-  <link rel="stylesheet" href="style.css">
-  
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Gestion des Rendez-vous - LaCentrale.ma</title>
+    <style>
+        header {
+            background: white;
+            padding: 10px 40px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 120px; /* Augmenté pour accommoder le plus grand logo */
+        }
+
+        .logo img {
+            height: 120px; /* Augmenté à 120px */
+            width: auto;
+        }
+
+        .logo {
+            flex: 0 0 auto;
+            display: flex;
+            align-items: center;
+        }
+
+        nav {
+            flex: 1 1 auto;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        nav ul {
+            display: flex;
+            gap: 30px;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            align-items: center;
+        }
+
+        nav a {
+            color: #333;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 16px;
+            transition: color 0.3s;
+        }
+
+        nav a:hover {
+            color: #0077b6;
+        }
+
+        .add-rdv-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .alert {
+            padding: 10px; margin-bottom: 15px; border-radius: 4px;
+        }
+
+        body {
+            font-weight: 600;
+            font-family: Arial, sans-serif;
+            font-size: 16px;
+            margin: 0;
+            background: #f7f9fc;
+        }
+
+        .dispo-section {
+            padding: 20px;
+            margin: 20px;
+            border-radius: 10px;
+        };
+
+        .dispo-section h2 {
+            margin-bottom: 15px;
+        }
+
+        .dispo-day {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .dispo-day input[type="time"] {
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        #saveDispoBtn {
+            margin: 20px;
+            margin-top: 10px;
+            border-radius: 10px;
+            background-color: #0077b6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+        }
+
+        #saveDispoBtn:hover {
+            background-color: #005b8e;
+        }
+
+        main {
+            padding: 20px;
+        }
+
+        button {
+            background-color: #0077b6;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #005f87;
+        }
+
+        table {
+            width: 100%;
+            background: white;
+            border-collapse: collapse;
+            margin-top: 20px;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        th, td {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+            text-align: left;
+        }
+
+        /* Section disponibilité */
+        .dispo {
+            background-color: #e7f2ff;
+            padding: 15px 20px;
+            margin: 20px;
+            border-radius: 8px;
+        }
+
+        .dispo label {
+            margin-right: 15px;
+        }
+
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 20px;
+            width: 300px;
+            border-radius: 8px;
+            position: relative;
+        }
+
+        .close {
+            position: absolute;
+            right: 10px;
+            top: 5px;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        form label {
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        .calendar-form {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 30px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .day-slot {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+        }
+
+        .day-header {
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+
+        .time-slots {
+            display: flex;
+            gap: 20px;
+            margin-left: 25px;
+        }
+
+        .time-input {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .time-input input[type="time"] {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .save-availability {
+            margin-bottom: 10px;
+            background: #0077b6;
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        .save-availability:hover {
+            background: #005f8d;
+        }
+
+        .availability-form {
+            padding: 30px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            max-width: 600px;
+            margin: 20px auto;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .save-btn {
+            background: #0077b6;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+
+        .rdv-table {
+            width: 100%;
+            background: white;
+            border-collapse: collapse;
+            margin-top: 20px;
+            border-radius: 5px;
+            overflow: hidden;
+            border: 2px solid #0077b6; /* Ajout de la bordure bleue */
+        }
+
+        .rdv-table th, .rdv-table td {
+            padding: 15px;
+            border: 1px solid #0077b6; /* Bordures intérieures bleues */
+        }
+
+        .rdv-table thead {
+            background-color: #0077b6;
+            color: white;
+        }
+
+        .section-title {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+
+        .rdv-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .btn-cancel {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .btn-cancel:hover {
+            background: #bb2d3b;
+        }
+
+        .no-data {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+        }
+    </style>
 </head>
 <body>
-  <header>
-    <div class="logo">LaCentrale<span class="dot">.</span><span class="ma">ma</span></div>
-    <nav>
-     <?php
-      if ($conn->connect_error) {
-         die("Connection failed: " . $conn->connect_error);
-      }
-
-      $sql = "SELECT name, specialty FROM doctors WHERE doctor_id = $doctor_id";
-      $result = $conn->query($sql);
-
-      if ($result->num_rows > 0) {
-          $doctor = $result->fetch_assoc();
-      ?>
-      <ul>
-        <li><a href="<?php echo generate_url('index.php'); ?>">Accueil</a></li>
-        <li><a href="<?php echo generate_url('gestion_med.php'); ?>">Rendez-vous</a></li>
-        <li><a href="#">Patients</a></li> <?php /* Assuming 'Patients' link is not yet implemented */?>
-        <li><a href="<?php echo generate_url('logout.php'); ?>">Déconnexion</a></li> <?php /* Assuming you'll create a logout.php */?>
-      </ul>
-    </nav>
-   <div class="doctor-info" style="color: white;">
-        Bonjour, Dr. <?php echo $doctor['name']; ?> (<?php echo $doctor['specialty']; ?>)
-   </div>
- <?php
-      }
-      // Close the connection used for header info
-      $conn->close();
-    ?>
-  </header>
-
-  <main>
-   <?php
-   if ($conn->connect_error) {
-        die("Connection failed: " . $conn->connect_error);
-    }
-
-    $sql_doctor_info = "SELECT specialty, contact_info FROM doctors WHERE doctor_id = $doctor_id";
-    $result_doctor_info = $conn->query($sql_doctor_info);
-    //$doctor_info = $result_doctor_info->fetch_assoc();
-    ?>
-    <?php if (isset($_SESSION['success_message'])): ?>
-        <div class="alert alert-success"><?php echo $_SESSION['success_message']; unset($_SESSION['success_message']); ?></div>
-    <?php endif; ?>
-    <?php if (isset($_SESSION['error_message'])): ?>
-        <div class="alert alert-danger"><?php echo $_SESSION['error_message']; unset($_SESSION['error_message']); ?></div>
-    <?php endif; ?>
-    <div id="statusMessage" class="alert" style="display: none;"></div>
-    <section class="doctor-info-section" style="margin-top: 20px; padding: 20px; background-color: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-        <h3>Mes Informations</h3>
-        <?php if (!empty($update_message)) { echo "<p style='color: green;'>$update_message</p>"; } ?>
-        <form method="post" action="">
-            <input type="hidden" name="update_doctor_info" value="1">
-            <div style="margin-bottom: 15px;">
-                <label for="specialty" style="display: block; margin-bottom: 5px; font-weight: bold;">Spécialité:</label>
-                <input type="text" id="specialty" name="specialty" value="<?php echo htmlspecialchars($doctor_info['specialty']); ?>" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+    <header>
+        <div class="logo">
+            <img src="img/la centrale1.png" alt="LaCentrale.ma">
+        </div>
+        <nav>
+            <ul>
+                <li><a href="gestion_med.php">Accueil</a></li>
+                <li><a href="javascript:void(0)" onclick="showSection('rdv-list')">Rendez-vous</a></li>
+                <li><a href="javascript:void(0)" onclick="showSection('calendar')">Calendrier</a></li>
+                <li><a href="logout.php">Déconnexion</a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <section id="appointments" class="section">
+            <div class="add-rdv-section">
+                <h3>Ajouter un rendez-vous</h3>
+                <form id="manual-rdv-form" method="POST">
+                    <!-- Formulaire d'ajout de rendez-vous manuel -->
+                    <input type="hidden" name="add_appointment" value="1">
+                    <label>Nom du patient: <input type="text" id="patient_name" name="patient_name" required></label>
+                    <label>Date: <input type="date" id="appointment_date" name="appointment_date" required></label>
+                    <label>Heure: <input type="time" id="appointment_time" name="appointment_time" required></label>
+                    <label>Motif: <input type="text" id="motif" required></label>
+                    <button type="submit">Ajouter</button>
+                </form>
             </div>
-            <div style="margin-bottom: 15px;">
-                <label for="contact_info" style="display: block; margin-bottom: 5px; font-weight: bold;">Contact Info:</label>
-                <input type="text" id="contact_info" name="contact_info" value="<?php echo htmlspecialchars($doctor_info['contact_info']); ?>" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-            </div>
-            <button type="submit" style="background-color: #02c39a; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer;">Mettre à jour</button>
-        </form>
-    </section>
+            <div class="rdv-list">
+                <h3>Liste des rendez-vous</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nom du patient</th>
+                            <th>Date</th>
+                            <th>Heure</th>
+                            <th>Motif</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php
+                        // Récupérer les rendez-vous du médecin connecté
+                        $sql = "SELECT a.appointment_id, p.name AS patient_name, a.appointment_datetime, a.motif, a.status
+                               FROM appointments a
+                               JOIN patients p ON a.patient_id = p.patient_id
+                               WHERE a.doctor_id = ? 
+                               AND a.status = 'scheduled'
+                               ORDER BY a.appointment_datetime ASC";
+                        
+                        $stmt = $conn->prepare($sql);
+                        $stmt->bind_param("i", $_SESSION['doctor_id']);
+                        $stmt->execute();
+                        $result = $stmt->get_result();
 
-    <section class="dispo-section" style="margin-top: 20px; padding: 20px; background-color: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-        <h3>Mes Horaires Réguliers</h3>
-        <form method="post" action="">
-            <input type="hidden" name="update_working_hours" value="1">
-            <div style="margin-bottom: 10px;">
-                <input type="checkbox" id="monday" name="working_days[]" value="Monday">
-                <label for="monday">Lundi</label>
-                <input type="time" name="monday_start_time"> - <input type="time" name="monday_end_time">
+                        if ($result->num_rows > 0) {
+                            while ($row = $result->fetch_assoc()) {
+                                $date = new DateTime($row['appointment_datetime']);
+                                echo "<tr>";
+                                echo "<td>" . htmlspecialchars($row['patient_name']) . "</td>";
+                                echo "<td>" . $date->format('d/m/Y') . "</td>";
+                                echo "<td>" . $date->format('H:i') . "</td>";
+                                echo "<td>" . htmlspecialchars($row['motif']) . "</td>";
+                                echo "<td>
+                                    <form method='post' action=''>
+                                        <input type='hidden' name='cancel_appointment' value='1'>
+                                        <input type='hidden' name='appointment_id' value='" . $row['appointment_id'] . "'>
+                                        <button type='submit' class='btn-cancel'>Annuler</button>
+                                    </form>
+                                </td>";
+                                echo "</tr>";
+                            }
+                        } else {
+                            echo "<tr><td colspan='5' style='text-align: center;'>Aucun rendez-vous prévu</td></tr>";
+                        }
+                        $stmt->close();
+                        ?>
+                    </tbody>
+                </table>
             </div>
-            <div style="margin-bottom: 10px;">
-                <input type="checkbox" id="tuesday" name="working_days[]" value="Tuesday">
-                <label for="tuesday">Mardi</label>
-                <input type="time" name="tuesday_start_time"> - <input type="time" name="tuesday_end_time">
+        </section>
+        <section id="rdv-list" class="section" style="display:none">
+            <h3 class="section-title">Liste des Rendez-vous</h3>
+            <div class="rdv-container">
+                <table class="rdv-table">
+                    <thead>
+                        <tr>
+                            <th>Patient</th>
+                            <th>Téléphone</th>
+                            <th>Date</th>
+                            <th>Heure</th>
+                            <th>Statut</th>
+                            <th>Médecin</th>
+                            <th>Spécialité</th>
+                            <th>Motif</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rdv-tbody">
+                        <!-- Les données seront chargées ici dynamiquement -->
+                    </tbody>
+                </table>
             </div>
-            <div style="margin-bottom: 10px;">
-                <input type="checkbox" id="wednesday" name="working_days[]" value="Wednesday">
-                <label for="wednesday">Mercredi</label>
-                <input type="time" name="wednesday_start_time"> - <input type="time" name="wednesday_end_time">
-            </div>
-            <div style="margin-bottom: 10px;">
-                <input type="checkbox" id="thursday" name="working_days[]" value="Thursday">
-                <label for="thursday">Jeudi</label>
-                <input type="time" name="thursday_start_time"> - <input type="time" name="thursday_end_time">
-            </div>
-            <div style="margin-bottom: 10px;">
-                <input type="checkbox" id="friday" name="working_days[]" value="Friday">
-                <label for="friday">Vendredi</label>
-                <input type="time" name="friday_start_time"> - <input type="time" name="friday_end_time">
-            </div>
-            <div style="margin-bottom: 10px;">
-                <input type="checkbox" id="saturday" name="working_days[]" value="Saturday">
-                <label for="saturday">Samedi</label>
-                <input type="time" name="saturday_start_time"> - <input type="time" name="saturday_end_time">
-            </div>
-            <div style="margin-bottom: 10px;">
-                <input type="checkbox" id="sunday" name="working_days[]" value="Sunday">
-                <label for="sunday">Dimanche</label>
-                <input type="time" name="sunday_start_time"> - <input type="time" name="sunday_end_time">
-            </div>
-            <button type="submit" style="background-color: #02c39a; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; margin-top: 15px;">Enregistrer les horaires</button>
-        </form>
-    </section>
+        </section>
+        <section id="calendar" class="section" style="display:none">
+            <h3>Ajouter une disponibilité</h3>
+            <form method="POST" class="calendar-form">
+                <input type="hidden" name="save_availability" value="1">
+                <div class="form-group">
+                    <label>Date :</label>
+                    <input type="date" name="date_calendrier" required>
+                </div>
+                <div class="form-group">
+                    <label>Heure :</label>
+                    <input type="time" name="heure_calendrier" required>
+                </div>
+                <button type="submit" class="save-btn">Enregistrer</button>
+            </form>
 
-  <!-- Section Disponibilité -->
-  <section class="dispo-section">
+            <div class="calendar-display">
+                <h4>Disponibilités enregistrées</h4>
+                <table class="rdv-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Heure</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php
+                        $sql = "SELECT * FROM calendrier ORDER BY date_calendrier, heure_calendrier";
+                        $result = $conn->query($sql);
 
-    <h3>Ajouter une disponibilité exceptionnelle</h3>
-<div class="exceptional-dispo">
-  <div class="exception-box">
-    <label for="exceptionDate">📅 Date</label>
-    <input type="date" id="exceptionDate" />
-  </div>
-  <div class="exception-box">
-    <label for="exceptionStart">🕘 Heure de début</label>
-    <input type="time" id="exceptionStart" />
-  </div>
-  <div class="exception-box">
-    <label for="exceptionEnd">🕔 Heure de fin</label>
-    <input type="time" id="exceptionEnd" />
-  </div>
-</div>
-    <button type="button" id="saveDispoBtn">Enregistrer</button>
-  </form>
-</section>
-  <main>
-    <h2>Liste des Rendez-vous</h2>
-    <button id="addBtn">+ Nouveau Rendez-vous</button>
-    <table>
-      <thead>
-        <tr>git
-          <th>Nom du patient</th>
-          <th>Date</th>
-          <th>Heure</th>
-          <th>Motif</th>
-        </tr>
-      </thead>
-      <tbody id="rdvTable">
+                        if ($result && $result->num_rows > 0) {
+                            while ($row = $result->fetch_assoc()) {
+                                echo "<tr>";
+                                echo "<td>" . date('d/m/Y', strtotime($row['date_calendrier'])) . "</td>";
+                                echo "<td>" . date('H:i', strtotime($row['heure_calendrier'])) . "</td>";
+                                echo "<td>
+                                        <form method='post' style='display:inline;'>
+                                            <input type='hidden' name='delete_id' value='" . $row['id'] . "'>
+                                            <button type='submit' class='btn-cancel'>Supprimer</button>
+                                        </form>
+                                      </td>";
+                                echo "</tr>";
+                            }
+                        } else {
+                            echo "<tr><td colspan='3' style='text-align:center;'>Aucune disponibilité</td></tr>";
+                        }
+                        ?>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+    <script>
+        // Afficher la section accueil par défaut au chargement
+        document.addEventListener('DOMContentLoaded', function() {
+            showSection('appointments');
+        });
 
-        $sql_appointments = "SELECT a.appointment_id, p.name AS patient_name, a.appointment_datetime, a.status
-                             FROM appointments a
-                             JOIN patients p ON a.patient_id = p.patient_id
-                             WHERE a.doctor_id = ? AND a.status = 'scheduled'
-                             ORDER BY a.appointment_datetime";
-        $stmt_appointments = $conn->prepare($sql_appointments);
-        $stmt_appointments->bind_param("i", $doctor_id);
-        $stmt_appointments->execute();
-        $result_appointments = $stmt_appointments->get_result();
+        function showSection(sectionId) {
+            document.querySelectorAll('.section').forEach(section => {
+                section.style.display = 'none';
+            });
 
-        if ($result_appointments->num_rows > 0) {
-            while ($row = $result_appointments->fetch_assoc()) {
-                $appointment_time = new DateTime($row['appointment_datetime']);
-                echo "<tr>";
-                echo "<td>" . htmlspecialchars($row['patient_name']) . "</td>";
-                echo "<td>" . $appointment_time->format('Y-m-d') . "</td>";
-                echo "<td>" . $appointment_time->format('H:i') . "</td>";
-                echo "<td>"; // Placeholder for Motif - you might need to add a motif column to the appointments table or fetch it if it exists
-                echo "<form method='post' action=''><input type='hidden' name='cancel_appointment' value='1'><input type='hidden' name='appointment_id' value='" . $row['appointment_id'] . "'><button type='submit'>Annuler</button></form></td>";
-                echo "</tr>";
+            const selectedSection = document.getElementById(sectionId);
+            if (selectedSection) {
+                selectedSection.style.display = 'block';
+                if (sectionId === "rdv-list") {
+                    loadAppointments();
+                }
             }
-        } else {
-            echo "<tr><td colspan='4'>Aucun rendez-vous à venir.</td></tr>";
         }
-        $stmt_appointments->close();
-        $conn->close();
-        ?>
-      </tbody>
-    </table>
-  </main>
 
-  <!-- Modale d'ajout -->
-  <div class="modal" id="modal">
-    <div class="modal-content">
-      <span class="close" id="closeModal">&times;</span>
-      <h3>Nouveau Rendez-vous</h3> <?php /* This form was updated in a previous step to submit via JS fetch */ ?>
-      <form id="rdvForm" method="POST" action="">
-        <input type="hidden" name="add_appointment" value="1">
-        <label>Nom du patient: <input type="text" id="patient_name" name="patient_name" required></label>
-        <label>Date: <input type="date" id="appointment_date" name="appointment_date" required></label>
-        <label>Heure: <input type="time" id="appointment_time" name="appointment_time" required></label>
-        <label>Motif: <input type="text" id="motif" required></label>
-        <button type="submit">Ajouter</button>
-      </form>
-    </div>
-  </div>
+        function loadAppointments() {
+            fetch("gestion_med.php?section=rdv")
+                .then(response => response.json())
+                .then(data => {
+                    const tbody = document.getElementById("rdv-tbody");
+                    tbody.innerHTML = "";
+                    
+                    if (data.length === 0) {
+                        tbody.innerHTML = `<tr><td colspan="9" class="no-data">Aucun rendez-vous prévu</td></tr>`;
+                        return;
+                    }
+                    
+                    data.forEach(rdv => {
+                        const date = new Date(rdv.appointment_datetime);
+                        const tr = document.createElement("tr");
+                        tr.innerHTML = `
+                            <td>${escapeHtml(rdv.patient_name)}</td>
+                            <td>${escapeHtml(rdv.patient_phone)}</td>
+                            <td>${date.toLocaleDateString()}</td>
+                            <td>${date.toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"})}</td>
+                            <td>${escapeHtml(rdv.status)}</td>
+                            <td>${escapeHtml(rdv.doctor_name)}</td>
+                            <td>${escapeHtml(rdv.specialty)}</td>
+                            <td>${escapeHtml(rdv.motif)}</td>
+                            <td>
+                                <button class="btn-cancel" onclick="cancelAppointment(${rdv.appointment_id})">
+                                    Annuler
+                                </button>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                })
+                .catch(error => console.error("Erreur:", error));
+        }
 
-  <script src="script.js"></script>
+        function escapeHtml(unsafe) {
+            return unsafe
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/\'/g, "&#039;");
+        }
+
+        function cancelAppointment(appointmentId) {
+            if (confirm('Voulez-vous vraiment annuler ce rendez-vous ?')) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.innerHTML = `
+                    <input type="hidden" name="cancel_appointment" value="1">
+                    <input type="hidden" name="appointment_id" value="${appointmentId}">
+                `;
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+
+        function deleteAvailability(id) {
+            if (confirm('Voulez-vous vraiment supprimer cette disponibilité ?')) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.innerHTML = `
+                    <input type="hidden" name="delete_availability" value="1">
+                    <input type="hidden" name="availability_id" value="${id}">
+                `;
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+    </script>
+
+    <style>
+        nav a.active {
+            color: #0077b6;
+            font-weight: bold;
+            border-bottom: 2px solid #0077b6;
+        }
+    </style>
 </body>
 </html>
-<style>
-    body {
-  font-family: Arial, sans-serif;
-  margin: 0;
-  background: #f7f9fc;
-}
-
-.dispo-section {
-  background-color: #eef7ff;
-  padding: 20px;
-  margin: 20px;
-  border-radius: 10px;
-}
-
-.dispo-section h2 {
-  margin-bottom: 15px;
-}
-
-.dispo-day {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 10px;
-}
-
-.dispo-day input[type="time"] {
-  padding: 5px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-}
-
-#saveDispoBtn {
-  margin-top: 10px;
-  background-color: #0077b6;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-#saveDispoBtn:hover {
-  background-color: #005b8e;
-}
-
-header {
-  background-color: #0077b6;
-  color: white;
-  padding: 15px 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-nav ul {
-  list-style: none;
-  display: flex;
-  gap: 20px;
-}
-
-nav a {
-  color: white;
-  text-decoration: none;
-}
-
-main {
-  padding: 20px;
-}
-
-button {
-  background-color: #0077b6;
-  color: white;
-  border: none;
-  padding: 10px 15px;
-  cursor: pointer;
-  border-radius: 5px;
-}
-
-button:hover {
-  background-color: #005f87;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 20px;
-  background: white;
-  border-radius: 5px;
-  overflow: hidden;
-}
-
-th, td {
-  padding: 10px;
-  border-bottom: 1px solid #ddd;
-  text-align: left;
-}
-
-/* Section disponibilité */
-.dispo {
-  background-color: #e7f2ff;
-  padding: 15px 20px;
-  margin: 20px;
-  border-radius: 8px;
-}
-
-.dispo label {
-  margin-right: 15px;
-}
-
-/* Modal styles */
-.modal {
-  display: none;
-  position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  background-color: rgba(0,0,0,0.5);
-  justify-content: center;
-  align-items: center;
-}
-
-.modal-content {
-  background: white;
-  padding: 20px;
-  width: 300px;
-  border-radius: 8px;
-  position: relative;
-}
-
-.close {
-  position: absolute;
-  right: 10px;
-  top: 5px;
-  font-size: 20px;
-  cursor: pointer;
-}
-
-form label {
-  display: block;
-  margin-bottom: 10px;
-}
-
-</style>
-
-
-<script>
-    // Javascript for controlling the modal display
-    const saveDispoBtn = document.getElementById("saveDispoBtn");
-    const addBtn = document.getElementById("addBtn");
-    const modal = document.getElementById("modal");
-    const closeModal = document.getElementById("closeModal");
-
-// Ouvrir/fermer la modale
-addBtn.onclick = () => {
-  modal.style.display = "flex";
-};
-closeModal.onclick = () => {
-  modal.style.display = "none";
-};
-</script>

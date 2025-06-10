@@ -60,12 +60,57 @@ if ($doctor_id <= 0 || !$doctor) {
     body {
       font-family: 'Segoe UI', sans-serif;
       background-color: #f4f6f8;
-      padding: 40px;
+      margin: 0;
+      padding: 0;
+    }
+
+    .header {
+      background: white;
+      padding: 0 40px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      margin-bottom: 40px;
+      height: 80px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .logo {
+      position: absolute;
+      left: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+    }
+
+    .logo img {
+      height: 130px;
+      width: auto;
+      margin-top: -15px;
+      object-fit: contain;
+    }
+
+    .doctor-info {
+      text-align: center;
+      margin: 40px 0;
     }
 
     h1 {
       text-align: center;
       color: #2c3e50;
+      font-size: 32px;
+      margin-bottom: 10px;
+    }
+
+    .specialty {
+      text-align: center;
+      color: #0077b6;
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 30px;
+      font-family: 'Poppins', sans-serif;
     }
 
     .agenda-container {
@@ -106,9 +151,17 @@ if ($doctor_id <= 0 || !$doctor) {
   </style>
 </head>
 <body>
+  <div class="header">
+    <div class="logo">
+      <img src="img/la centrale1.png" alt="LaCentrale.ma">
+    </div>
+  </div>
+
 <?php if ($doctor): ?>
-  <h1>Agenda de <?php echo htmlspecialchars($doctor['name']); ?></h1>
-  <p>Spécialité: <?php echo htmlspecialchars($doctor['specialty']); ?></p>
+  <div class="doctor-info">
+    <h1>Dr. <?php echo htmlspecialchars($doctor['name']); ?></h1>
+    <div class="specialty"><?php echo htmlspecialchars($doctor['specialty']); ?></div>
+  </div>
   <h2>Choisissez une date de rendez-vous</h2>
   
   <div class="agenda-container" id="agenda"></div>
