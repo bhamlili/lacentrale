@@ -13,23 +13,22 @@ include 'config.php';
     body {
       margin: 0;
       font-family: 'Cairo', sans-serif;
-      background: #f5f5f5 url('fond-texture.jpg') repeat;
+      background: #e8f4f8;
+      padding-top: 20px;
     }
 
-    header {
-      background-color: white;
-      padding: 15px 30px;
+    .topbar {
+      background: white;
       box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      padding: 10px 30px;
+      margin-bottom: 40px;
+      display: flex;
+      align-items: center;
     }
 
-    .logo {
-      font-size: 24px;
-      font-weight: bold;
-      color: #007acc;
-    }
-
-    .logo span {
-      color: #0abde3;
+    .topbar img {
+      height: 60px;
+      width: auto;
     }
 
     .container {
@@ -37,45 +36,56 @@ include 'config.php';
       justify-content: center;
       align-items: flex-start;
       gap: 40px;
-      margin: 60px auto;
+      margin: 30px auto;
       max-width: 900px;
-      flex-wrap: wrap; /* Permet d’adapter en mobile */
+      flex-wrap: wrap;
     }
 
     .card {
-      flex: 1 1 300px; /* Prend au moins 300px, s’adapte */
+      flex: 1 1 300px;
       max-width: 350px;
-      background-color: #e0e0e0;
-      padding: 40px 20px;
-      border-radius: 12px;
-      box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+      background-color: #f0f9ff;
+      padding: 30px 20px;
+      border-radius: 15px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+      border: 2px solid #007acc;
       text-align: center;
-      position: relative;
-      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
     }
 
     .card.patient {
-      background: #cce5f5;
+      background: #f0f9ff;
+      border-color: #007acc;
     }
 
     .card.medecin {
-      background: #ffd180;
+      background: #f0f9ff;
+      border-color: #007acc;
     }
 
     .card img {
-      width: 150px;
-      height: 150px;
+      width: 140px;
+      height: 140px;
       object-fit: cover;
       border-radius: 50%;
       border: 4px solid white;
       box-shadow: 0 4px 10px rgba(0,0,0,0.2);
       margin-bottom: 30px;
+      display: block;
+      margin-left: auto;
+      margin-right: auto;
     }
 
     .card a {
-      display: inline-block;
+      display: block;
       padding: 15px 30px;
       font-size: 18px;
+      margin: 20px auto 0;
+      width: fit-content;
+      min-width: 200px;
       background: #007acc;
       color: white;
       text-decoration: none;
@@ -103,9 +113,9 @@ include 'config.php';
   </style>
 </head>
 <body>
-  <header>
-    <div class="logo">LaCentrale<span>.ma</span></div>
-  </header>
+  <div class="topbar">
+    <img src="img/La Centrale1.png" alt="La Centrale Logo" />
+  </div>
 
   <div class="container">
     <div class="card patient">
