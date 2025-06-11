@@ -166,350 +166,259 @@ if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['section']) && $_GET['sec
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Gestion des Rendez-vous - LaCentrale.ma</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
-        header {
-            background: white;
-            padding: 10px 40px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            height: 120px; /* Augmenté pour accommoder le plus grand logo */
-        }
-
-        .logo img {
-            height: 120px; /* Augmenté à 120px */
-            width: auto;
-        }
-
-        .logo {
-            flex: 0 0 auto;
-            display: flex;
-            align-items: center;
-        }
-
-        nav {
-            flex: 1 1 auto;
-            display: flex;
-            justify-content: flex-end;
-        }
-
-        nav ul {
-            display: flex;
-            gap: 30px;
-            list-style: none;
-            margin: 0;
-            padding: 0;
-            align-items: center;
-        }
-
-        nav a {
-            color: #333;
-            text-decoration: none;
-            font-weight: 600;
-            font-size: 16px;
-            transition: color 0.3s;
-        }
-
-        nav a:hover {
-            color: #0077b6;
-        }
-
-        .add-rdv-section {
-            background: white;
-            padding: 20px;
-            margin: 20px 0;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-
-        .alert {
-            padding: 10px; margin-bottom: 15px; border-radius: 4px;
+        :root {
+            --primary: #007acc;
+            --secondary: #0abde3;
+            --success: #00b894;
+            --danger: #d63031;
+            --warning: #fdcb6e;
+            --light: #e8f4f8;
+            --dark: #004a77;
         }
 
         body {
-            font-weight: 600;
-            font-family: Arial, sans-serif;
-            font-size: 16px;
             margin: 0;
-            background: #f7f9fc;
+            font-family: 'Poppins', sans-serif;
+            background: var(--light);
         }
 
-        .dispo-section {
-            padding: 20px;
-            margin: 20px;
-            border-radius: 10px;
-        };
-
-        .dispo-section h2 {
-            margin-bottom: 15px;
-        }
-
-        .dispo-day {
+        /* Navbar Styles */
+        .navbar {
+            background: white;
+            padding: 10px 40px;
             display: flex;
             align-items: center;
-            gap: 10px;
-            margin-bottom: 10px;
+            justify-content: space-between;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+            height: 120px;
         }
 
-        .dispo-day input[type="time"] {
-            padding: 5px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
+        .navbar .logo {
+            padding: 0;
+            flex: 0 0 auto;
         }
 
-        #saveDispoBtn {
-            margin: 20px;
-            margin-top: 10px;
-            border-radius: 10px;
-            background-color: #0077b6;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            cursor: pointer;
+        .navbar .logo img {
+            height: 180px;
+            width: auto;
+            margin-top: 30px;
         }
 
-        #saveDispoBtn:hover {
-            background-color: #005b8e;
-        }
-
-        main {
-            padding: 20px;
-        }
-
-        button {
-            background-color: #0077b6;
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-
-        button:hover {
-            background-color: #005f87;
-        }
-
-        table {
-            width: 100%;
-            background: white;
-            border-collapse: collapse;
-            margin-top: 20px;
-            border-radius: 5px;
-            overflow: hidden;
-        }
-
-        th, td {
-            padding: 10px;
-            border-bottom: 1px solid #ddd;
-            text-align: left;
-        }
-
-        /* Section disponibilité */
-        .dispo {
-            background-color: #e7f2ff;
-            padding: 15px 20px;
-            margin: 20px;
-            border-radius: 8px;
-        }
-
-        .dispo label {
-            margin-right: 15px;
-        }
-
-        /* Modal styles */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background-color: rgba(0,0,0,0.5);
-            justify-content: center;
-            align-items: center;
-        }
-
-        .modal-content {
-            background: white;
-            padding: 20px;
-            width: 300px;
-            border-radius: 8px;
-            position: relative;
-        }
-
-        .close {
-            position: absolute;
-            right: 10px;
-            top: 5px;
-            font-size: 20px;
-            cursor: pointer;
-        }
-
-        form label {
-            display: block;
-            margin-bottom: 10px;
-        }
-
-        .calendar-form {
-            max-width: 600px;
-            margin: 20px auto;
-            padding: 30px;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-
-        .day-slot {
-            margin-bottom: 20px;
-            padding: 15px;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-        }
-
-        .day-header {
-            font-size: 18px;
-            margin-bottom: 10px;
-        }
-
-        .time-slots {
-            display: flex;
-            gap: 20px;
-            margin-left: 25px;
-        }
-
-        .time-input {
+        .navbar nav {
             display: flex;
             align-items: center;
-            gap: 10px;
+            justify-content: flex-end;
+            flex: 1;
+            padding-left: 50px;
         }
 
-        .time-input input[type="time"] {
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+        .navbar nav ul {
+            display: flex;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            gap: 40px;
         }
 
-        .save-availability {
-            margin-bottom: 10px;
-            background: #0077b6;
-            color: white;
+        .navbar nav a {
+            color: var(--dark);
+            font-weight: 500;
+            text-decoration: none;
             padding: 12px 25px;
-            border: none;
             border-radius: 8px;
+            transition: all 0.3s ease;
             font-size: 16px;
-            cursor: pointer;
-            width: 100%;
-            margin-top: 20px;
         }
 
-        .save-availability:hover {
-            background: #005f8d;
+        .navbar nav a:hover,
+        .navbar nav a.active {
+            color: var(--primary);
+            background: var(--light);
+            transform: translateY(-2px);
         }
 
-        .availability-form {
+        /* Main Content adjustments */
+        .main-content {
             padding: 30px;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            max-width: 600px;
-            margin: 20px auto;
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            box-sizing: border-box;
         }
 
+        /* Dashboard Stats */
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-left: 4px solid var(--primary);
+        }
+
+        .stat-card h4 {
+            color: var(--dark);
+            margin: 0 0 10px 0;
+        }
+
+        .stat-card .number {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 10px 20px;
+            border-radius: 5px;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            transition: 0.3s;
+        }
+
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-success { background: var(--success); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-warning { background: var(--warning); color: white; }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        /* Tables */
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .table th {
+            background: var(--primary);
+            color: white;
+            padding: 12px;
+            font-weight: 500;
+        }
+
+        .table td {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .rdv-table {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border: 1px solid rgba(0,0,0,0.1);
+        }
+
+        .rdv-table th {
+            background: var(--primary);
+            color: white;
+            font-weight: 500;
+            text-align: left;
+            padding: 15px;
+        }
+
+        .rdv-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .rdv-table tr:hover {
+            background: var(--light);
+        }
+
+        /* Headings */
+        h1, h2, h3 {
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        /* Forms */
         .form-group {
             margin-bottom: 20px;
         }
 
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: bold;
-        }
-
-        .form-group input {
+        .form-control {
             width: 100%;
             padding: 10px;
             border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-
-        .save-btn {
-            background: #0077b6;
-            color: white;
-            padding: 12px 24px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            width: 100%;
-            font-size: 16px;
-            margin-top: 20px;
-        }
-
-        .rdv-table {
-            width: 100%;
-            background: white;
-            border-collapse: collapse;
-            margin-top: 20px;
             border-radius: 5px;
-            overflow: hidden;
-            border: 2px solid #0077b6; /* Ajout de la bordure bleue */
-        }
-
-        .rdv-table th, .rdv-table td {
-            padding: 15px;
-            border: 1px solid #0077b6; /* Bordures intérieures bleues */
-        }
-
-        .rdv-table thead {
-            background-color: #0077b6;
-            color: white;
-        }
-
-        .section-title {
-            text-align: center;
-            color: #333;
-            margin-bottom: 30px;
-        }
-
-        .rdv-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-        .btn-cancel {
-            background: #dc3545;
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-
-        .btn-cancel:hover {
-            background: #bb2d3b;
-        }
-
-        .no-data {
-            text-align: center;
-            color: #666;
-            font-style: italic;
+            font-family: 'Poppins', sans-serif;
         }
     </style>
 </head>
 <body>
-    <header>
+    <div class="navbar">
         <div class="logo">
-            <img src="img/la centrale1.png" alt="LaCentrale.ma">
+            <img src="img/La Centrale1.png" alt="LaCentrale.ma">
         </div>
         <nav>
             <ul>
-                <li><a href="gestion_med.php">Accueil</a></li>
+                <li><a href="javascript:void(0)" onclick="showSection('dashboard')">Tableau de bord</a></li>
                 <li><a href="javascript:void(0)" onclick="showSection('rdv-list')">Rendez-vous</a></li>
                 <li><a href="javascript:void(0)" onclick="showSection('calendar')">Calendrier</a></li>
                 <li><a href="logout.php">Déconnexion</a></li>
             </ul>
         </nav>
-    </header>
-    <main>
+    </div>
+
+    <div class="main-content">
+        <section id="dashboard" class="section">
+            <h2>Tableau de bord</h2>
+            <div class="stats-container">
+                <div class="stat-card">
+                    <h4>Rendez-vous aujourd'hui</h4>
+                    <div class="number">
+                        <?php
+                        $today = date('Y-m-d');
+                        $sql = "SELECT COUNT(*) as count FROM appointments 
+                               WHERE doctor_id = ? 
+                               AND DATE(appointment_datetime) = ?
+                               AND status = 'scheduled'";
+                        $stmt = $conn->prepare($sql);
+                        $stmt->bind_param("is", $doctor_id, $today);
+                        $stmt->execute();
+                        $result = $stmt->get_result();
+                        echo $result->fetch_assoc()['count'];
+                        ?>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <h4>Total des rendez-vous</h4>
+                    <div class="number">
+                        <?php
+                        $sql = "SELECT COUNT(*) as count FROM appointments WHERE doctor_id = ?";
+                        $stmt = $conn->prepare($sql);
+                        $stmt->bind_param("i", $doctor_id);
+                        $stmt->execute();
+                        $result = $stmt->get_result();
+                        echo $result->fetch_assoc()['count'];
+                        ?>
+                    </div>
+                </div>
+            </div>
+            <!-- Reste du contenu -->
+        </section>
         <section id="appointments" class="section">
             <div class="add-rdv-section">
                 <h3>Ajouter un rendez-vous</h3>
@@ -624,7 +533,7 @@ if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['section']) && $_GET['sec
                             <th>Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <body>
                         <?php
                         $sql = "SELECT * FROM calendrier ORDER BY date_calendrier, heure_calendrier";
                         $result = $conn->query($sql);
@@ -646,11 +555,11 @@ if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['section']) && $_GET['sec
                             echo "<tr><td colspan='3' style='text-align:center;'>Aucune disponibilité</td></tr>";
                         }
                         ?>
-                    </tbody>
+                    </body>
                 </table>
             </div>
         </section>
-    </main>
+    </div>
     <script>
         // Afficher la section accueil par défaut au chargement
         document.addEventListener('DOMContentLoaded', function() {

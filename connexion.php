@@ -148,7 +148,7 @@ mysqli_close($link);
 <body>
     <main>
         <div class="login-logo">
-            <img src="img/la centrale1.png" alt="LaCentrale.ma">
+            <img src="img/La Centrale1.png" alt="LaCentrale.ma">
         </div>
 
         <form id="loginForm" method="POST" action="" novalidate>
