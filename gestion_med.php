@@ -21,6 +21,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_doctor_info']))
 
     $sql_update = "UPDATE doctors SET specialty = ?, contact_info = ? WHERE doctor_id = ?";
     $stmt_update = $conn->prepare($sql_update);
+    if (!$stmt_update) {
+        die("Erreur de préparation de la requête: " . $conn->error);
+    }
     $stmt_update->bind_param("ssi", $new_specialty, $new_contact_info, $doctor_id);
 
     if ($stmt_update->execute()) {
@@ -369,151 +372,181 @@ if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['section']) && $_GET['sec
 </head>
 <body>
     <div class="navbar">
- <nav>
         <div class="logo">
             <img src="img/La Centrale1.png" alt="LaCentrale.ma">
         </div>
         <nav>
             <ul>
-                <li><a href="javascript:void(0)" onclick="showSection('dashboard')">Tableau de bord</a></li>
+                <li><a href="javascript:void(0)" onclick="showSection('accueil')">Accueil</a></li>
                 <li><a href="javascript:void(0)" onclick="showSection('rdv-list')">Rendez-vous</a></li>
                 <li><a href="javascript:void(0)" onclick="showSection('calendar')">Calendrier</a></li>
                 <li><a href="logout.php">Déconnexion</a></li>
             </ul>
         </nav>
- </nav>
     </div>
 
     <div class="main-content">
-        <section id="dashboard" class="section">
+        <section id="accueil" class="section card">
             <h2>Tableau de bord</h2>
+            <?php
+            // Compter les rendez-vous d'aujourd'hui
+            $today = date('Y-m-d');
+            $sql_today = "SELECT COUNT(*) as count FROM appointments 
+                         WHERE doctor_id = ? AND DATE(appointment_datetime) = ? 
+                         AND status = 'scheduled'";
+            $stmt = $conn->prepare($sql_today);
+            $stmt->bind_param("is", $doctor_id, $today);
+            $stmt->execute();
+            $today_count = $stmt->get_result()->fetch_assoc()['count'];
+
+            // Compter tous les rendez-vous
+            $sql_total = "SELECT COUNT(*) as count FROM appointments WHERE doctor_id = ?";
+            $stmt = $conn->prepare($sql_total);
+            $stmt->bind_param("i", $doctor_id);
+            $stmt->execute();
+            $total_count = $stmt->get_result()->fetch_assoc()['count'];
+            ?>
             <div class="stats-container">
                 <div class="stat-card">
                     <h4>Rendez-vous aujourd'hui</h4>
-                    <div class="number">
-                        <?php
-                        $today = date('Y-m-d');
-                        $sql = "SELECT COUNT(*) as count FROM appointments 
-                               WHERE doctor_id = ? 
-                               AND DATE(appointment_datetime) = ?
-                               AND status = 'scheduled'";
-                        $stmt = $conn->prepare($sql);
-                        $stmt->bind_param("is", $doctor_id, $today);
-                        $stmt->execute();
-                        $result = $stmt->get_result();
-                        echo $result->fetch_assoc()['count'];
-                        ?>
-                    </div>
+                    <div class="number"><?php echo $today_count; ?></div>
                 </div>
                 <div class="stat-card">
                     <h4>Total des rendez-vous</h4>
-                    <div class="number">
-                        <?php
-                        $sql = "SELECT COUNT(*) as count FROM appointments WHERE doctor_id = ?";
-                        $stmt = $conn->prepare($sql);
-                        $stmt->bind_param("i", $doctor_id);
-                        $stmt->execute();
-                        $result = $stmt->get_result();
-                        echo $result->fetch_assoc()['count'];
-                        ?>
-                    </div>
+                    <div class="number"><?php echo $total_count; ?></div>
                 </div>
             </div>
-            <!-- Reste du contenu -->
-        </section>
-        <section id="appointments" class="section">
-            <div class="add-rdv-section">
-                <h3>Ajouter un rendez-vous</h3>
-                <form id="manual-rdv-form" method="POST">
-                    <!-- Formulaire d'ajout de rendez-vous manuel -->
-                    <input type="hidden" name="add_appointment" value="1">
-                    <label>Nom du patient: <input type="text" id="patient_name" name="patient_name" required></label>
-                    <label>Date: <input type="date" id="appointment_date" name="appointment_date" required></label>
-                    <label>Heure: <input type="time" id="appointment_time" name="appointment_time" required></label>
-                    <label>Motif: <input type="text" id="motif" required></label>
-                    <button type="submit">Ajouter</button>
-                </form>
-            </div>
-            <div class="rdv-list">
- <div id="appointments-section">
-                <h3>Liste des rendez-vous</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Nom du patient</th>
-                            <th>Date</th>
-                            <th>Heure</th>
-                            <th>Motif</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php
-                        // Récupérer les rendez-vous du médecin connecté
-                        $sql = "SELECT a.appointment_id, p.name AS patient_name, a.appointment_datetime, a.motif, a.status
-                               FROM appointments a
-                               JOIN patients p ON a.patient_id = p.patient_id
-                               WHERE a.doctor_id = ? 
-                               AND a.status = 'scheduled'
-                               ORDER BY a.appointment_datetime ASC";
-                        
-                        $stmt = $conn->prepare($sql);
-                        $stmt->bind_param("i", $_SESSION['doctor_id']);
-                        $stmt->execute();
-                        $result = $stmt->get_result();
 
-                        if ($result->num_rows > 0) {
-                            while ($row = $result->fetch_assoc()) {
-                                $date = new DateTime($row['appointment_datetime']);
-                                echo "<tr>";
-                                echo "<td>" . htmlspecialchars($row['patient_name']) . "</td>";
-                                echo "<td>" . $date->format('d/m/Y') . "</td>";
-                                echo "<td>" . $date->format('H:i') . "</td>";
-                                echo "<td>" . htmlspecialchars($row['motif']) . "</td>";
-                                echo "<td>
-                                    <form method='post' action=''>
-                                        <input type='hidden' name='cancel_appointment' value='1'>
-                                        <input type='hidden' name='appointment_id' value='" . $row['appointment_id'] . "'>
-                                        <button type='submit' class='btn-cancel'>Annuler</button>
-                                    </form>
-                                </td>";
-                                echo "</tr>";
-                            }
-                        } else {
-                            echo "<tr><td colspan='5' style='text-align: center;'>Aucun rendez-vous prévu</td></tr>";
+            <!-- Ajout de la liste des rendez-vous dans l'accueil -->
+            <h3>Rendez-vous à venir</h3>
+            <table class="rdv-table">
+                <thead>
+                    <tr>
+                        <th>Patient</th>
+                        <th>Date</th>
+                        <th>Heure</th>
+                        <th>Statut</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php
+                    $sql = "SELECT a.appointment_id, 
+                           p.patient_id,
+                           p.name AS patient_name,
+                           a.appointment_datetime,
+                           a.status
+                           FROM appointments a
+                           JOIN patients p ON a.patient_id = p.patient_id
+                           WHERE a.doctor_id = ? 
+                           AND a.status = 'scheduled'
+                           AND DATE(a.appointment_datetime) >= CURDATE()
+                           ORDER BY a.appointment_datetime ASC
+                           LIMIT 5";
+                    
+                    $stmt = $conn->prepare($sql);
+                    $stmt->bind_param("i", $_SESSION['doctor_id']);
+                    $stmt->execute();
+                    $result = $stmt->get_result();
+
+                    if ($result->num_rows > 0) {
+                        while ($row = $result->fetch_assoc()) {
+                            $date = new DateTime($row['appointment_datetime']);
+                            echo "<tr>";
+                            echo "<td>" . htmlspecialchars($row['patient_name']) . "</td>";
+                            echo "<td>" . $date->format('d/m/Y') . "</td>";
+                            echo "<td>" . $date->format('H:i') . "</td>";
+                            echo "<td>" . htmlspecialchars($row['status']) . "</td>";
+                            echo "<td>
+                                <button onclick='cancelAppointment({$row['appointment_id']})' class='btn btn-danger'>
+                                    Annuler
+                                </button>
+                            </td>";
+                            echo "</tr>";
                         }
-                        $stmt->close();
-                        ?>
-                    </tbody>
- </table>
-                </table>
-            </div>
+                    } else {
+                        echo "<tr><td colspan='5' class='text-center'>Aucun rendez-vous prévu</td></tr>";
+                    }
+                    $stmt->close();
+                    ?>
+                </tbody>
+            </table>
         </section>
-        <section id="rdv-list" class="section" style="display:none">
- <div id="appointments-section">
-            <h3 class="section-title">Liste des Rendez-vous</h3>
-            <div class="rdv-container">
-                <table class="rdv-table">
-                    <thead>
-                        <tr>
-                            <th>Patient</th>
-                            <th>Téléphone</th>
-                            <th>Date</th>
-                            <th>Heure</th>
-                            <th>Statut</th>
-                            <th>Médecin</th>
-                            <th>Spécialité</th>
-                            <th>Motif</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="rdv-tbody">
-                        <!-- Les données seront chargées ici dynamiquement -->
-                    </tbody>
-                </table>
-            </div>
- </div>
 
+        <section id="rdv-list" class="section card" style="display:none">
+            <h2>Tous les rendez-vous</h2>
+            <div class="rdv-container">
+                <!-- Le contenu existant de la liste complète des rendez-vous -->
+                <div class="add-rdv-section">
+                    <h3>Ajouter un rendez-vous</h3>
+                    <form id="manual-rdv-form" method="POST">
+                        <!-- Formulaire d'ajout de rendez-vous manuel -->
+                        <input type="hidden" name="add_appointment" value="1">
+                        <label>Nom du patient: <input type="text" id="patient_name" name="patient_name" required></label>
+                        <label>Date: <input type="date" id="appointment_date" name="appointment_date" required></label>
+                        <label>Heure: <input type="time" id="appointment_time" name="appointment_time" required></label>
+                        <label>Motif: <input type="text" id="motif" required></label>
+                        <button type="submit">Ajouter</button>
+                    </form>
+                </div>
+                <div class="rdv-list">
+                    <h3>Liste des rendez-vous</h3>
+                    <table class="rdv-table">
+                        <thead>
+                            <tr>
+                                <th>Patient</th>
+                                <th>Date</th>
+                                <th>Heure</th>
+                                <th>Motif</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php
+                            $sql = "SELECT a.appointment_id, 
+                                   p.patient_id,
+                                   p.name AS patient_name,
+                                   a.appointment_datetime,
+                                   a.status
+                                   FROM appointments a
+                                   JOIN patients p ON a.patient_id = p.patient_id
+                                   WHERE a.doctor_id = ? 
+                                   AND a.status = 'scheduled'
+                                   ORDER BY a.appointment_datetime ASC";
+                            
+
+                            $stmt = $conn->prepare($sql);
+                            if (!$stmt) {
+                                die("Erreur de préparation de la requête: " . $conn->error);
+                            }
+                            $stmt->bind_param("i", $_SESSION['doctor_id']);
+                            $stmt->execute();
+                            $result = $stmt->get_result();
+
+                            if ($result->num_rows > 0) {
+                                while ($row = $result->fetch_assoc()) {
+                                    $date = new DateTime($row['appointment_datetime']);
+                                    echo "<tr>";
+                                    echo "<td>" . htmlspecialchars($row['patient_name']) . " (ID: " . $row['patient_id'] . ")</td>";
+                                    echo "<td>" . $date->format('d/m/Y') . "</td>";
+                                    echo "<td>" . $date->format('H:i') . "</td>";
+                                    echo "<td>" . htmlspecialchars($row['status']) . "</td>";
+                                    echo "<td>
+                                        <button onclick='cancelAppointment({$row['appointment_id']})' class='btn btn-danger'>
+                                            Annuler
+                                        </button>
+                                    </td>";
+                                    echo "</tr>";
+                                }
+                            } else {
+                                echo "<tr><td colspan='5' class='text-center'>Aucun rendez-vous prévu</td></tr>";
+                            }
+                            $stmt->close();
+                            ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </section>
         <section id="calendar" class="section" style="display:none">
             <h3>Ajouter une disponibilité</h3>
@@ -540,7 +573,7 @@ if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['section']) && $_GET['sec
                             <th>Actions</th>
                         </tr>
                     </thead>
-                    <body>
+                    <tbody>
                         <?php
                         $sql = "SELECT * FROM calendrier ORDER BY date_calendrier, heure_calendrier";
                         $result = $conn->query($sql);
@@ -562,7 +595,7 @@ if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['section']) && $_GET['sec
                             echo "<tr><td colspan='3' style='text-align:center;'>Aucune disponibilité</td></tr>";
                         }
                         ?>
-                    </body>
+                    </tbody>
                 </table>
             </div>
         </section>
@@ -588,11 +621,24 @@ if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['section']) && $_GET['sec
     </div>
 
     <script>
-        // Afficher la section accueil par défaut au chargement
+        function loadStats() {
+            // Récupérer le nombre de rendez-vous d'aujourd'hui
+            let todayCount = document.querySelector('.stats-container .today-count');
+            let totalCount = document.querySelector('.stats-container .total-count');
+            
+            fetch('get_stats.php')
+            .then(response => response.json())
+            .then(data => {
+                todayCount.textContent = data.today;
+                totalCount.textContent = data.total;
+            });
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
-            showSection('appointments');
+            showSection('accueil');
         });
 
+        // Remplacer la fonction showSection existante
         function showSection(sectionId) {
             document.querySelectorAll('.section').forEach(section => {
                 section.style.display = 'none';
@@ -605,6 +651,12 @@ if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['section']) && $_GET['sec
                     loadAppointments();
                 }
             }
+
+            // Mettre à jour la classe active dans la navigation
+            document.querySelectorAll('nav a').forEach(link => {
+                link.classList.remove('active');
+            });
+            document.querySelector(`nav a[onclick*="${sectionId}"]`).classList.add('active');
         }
 
         function loadAppointments() {
