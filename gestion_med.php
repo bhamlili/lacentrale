@@ -6,6 +6,10 @@ include 'config.php';
 // Database connection details
 include 'db_config.php';
 
+// Initialize active section in session
+if (!isset($_SESSION['active_section'])) {
+    $_SESSION['active_section'] = 'accueil';
+}
 
 // Fetch doctor information
 $doctor_id = $_SESSION['doctor_id'];
@@ -52,7 +56,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['cancel_appointment']))
     $stmt_cancel->close();
 }
 
-// Handle form submission for adding new appointment
+// Modifier le handler d'ajout de rendez-vous
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_appointment'])) {
     $patient_name = $_POST['patient_name'];
     $appointment_date = $_POST['appointment_date'];
@@ -61,29 +65,40 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_appointment'])) {
 
     // Combine date and time for the database
     $appointment_datetime = $appointment_date . ' ' . $appointment_time;
-    // For simplicity, assuming patient name is unique or you'll handle patient creation/selection
 
-    // In a real app, you would likely have a way to link to an existing patient or create a new one.
-    // For this example, let's assume we have a patient with ID 1 for now.
-    // You would need to implement logic to find or create a patient based on the provided name.
-    $patient_id = 1; // Replace with actual patient ID lookup/creation logic
+    // Insérer d'abord le patient s'il n'existe pas
+    $sql_check_patient = "SELECT patient_id FROM patients WHERE name = ?";
+    $stmt = $conn->prepare($sql_check_patient);
+    $stmt->bind_param("s", $patient_name);
+    $stmt->execute();
+    $patient_result = $stmt->get_result();
 
-    $sql_insert_appointment = "INSERT INTO appointments (doctor_id, patient_id, appointment_datetime, motif, status) VALUES (?, ?, ?, ?, 'scheduled')";
-    $stmt_insert_appointment = $conn->prepare($sql_insert_appointment);
-    // Assuming 'motif' column exists in 'appointments' table. If not, remove it from the query and bind_param
-    $stmt_insert_appointment->bind_param("iiss", $doctor_id, $patient_id, $appointment_datetime, $motif);
-    if ($stmt_insert_appointment->execute()) {
-        // Redirect back to the gestion_med page after successful addition
-        $_SESSION['success_message'] = 'Rendez-vous ajouté avec succès.';
-        header("Location: " . generate_url('gestion_med.php'));
+    if ($patient_result->num_rows > 0) {
+        $patient_id = $patient_result->fetch_assoc()['patient_id'];
+    } else {
+        // Créer un nouveau patient
+        $sql_insert_patient = "INSERT INTO patients (name) VALUES (?)";
+        $stmt = $conn->prepare($sql_insert_patient);
+        $stmt->bind_param("s", $patient_name);
+        $stmt->execute();
+        $patient_id = $conn->insert_id;
+    }
+
+    // Insérer le rendez-vous
+    $sql_insert_appointment = "INSERT INTO appointments (doctor_id, patient_id, appointment_datetime, motif, status) 
+                             VALUES (?, ?, ?, ?, 'scheduled')";
+    $stmt = $conn->prepare($sql_insert_appointment);
+    $stmt->bind_param("iiss", $doctor_id, $patient_id, $appointment_datetime, $motif);
+    
+    if ($stmt->execute()) {
+        echo json_encode(['success' => true]);
         exit();
     } else {
-        $_SESSION['error_message'] = 'Erreur lors de l\'ajout du rendez-vous: ' . $conn->error;
-        // Respond with error
-        echo json_encode(['success' => false, 'message' => 'Erreur lors de l\'ajout du rendez-vous: ' . $conn->error]);
+        echo json_encode(['success' => false, 'error' => $conn->error]);
+        exit();
     }
-    $stmt_insert_appointment->close();
 }
+
 // Handle form submission for updating working hours
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_working_hours'])) {
     // Clear existing availability for the doctor
@@ -129,6 +144,29 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['save_availability'])) 
         echo "<script>alert('Erreur lors de l'ajout');</script>";
     }
     $stmt->close();
+}
+
+// Ajouter ce handler pour la suppression des disponibilités
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['delete_id'])) {
+    $delete_id = $_POST['delete_id'];
+    
+    $sql_delete = "DELETE FROM calendrier WHERE id = ?";
+    $stmt_delete = $conn->prepare($sql_delete);
+    $stmt_delete->bind_param("i", $delete_id);
+    
+    if ($stmt_delete->execute()) {
+        // Redirection avec message de succès
+        echo "<script>
+            alert('Disponibilité supprimée avec succès');
+            window.location.href = 'gestion_med.php';
+        </script>";
+    } else {
+        echo "<script>
+            alert('Erreur lors de la suppression: " . $conn->error . "');
+            window.location.href = 'gestion_med.php';
+        </script>";
+    }
+    $stmt_delete->close();
 }
 
 // Ajouter ce handler en haut du fichier avec les autres handlers POST
@@ -278,6 +316,12 @@ if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['section']) && $_GET['sec
             color: var(--primary);
         }
 
+        .stat-card .patient-name {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+
         /* Cards */
         .card {
             background: white;
@@ -368,6 +412,136 @@ if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['section']) && $_GET['sec
             border-radius: 5px;
             font-family: 'Poppins', sans-serif;
         }
+
+        /* Ajoutez ces styles à la section style existante */
+        .availability-form {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+            max-width: 600px;
+            margin: 0 auto 30px;
+        }
+
+        .availability-input {
+            margin-bottom: 25px;
+        }
+
+        .availability-input label {
+            display: block;
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 10px;
+            color: var(--dark);
+        }
+
+        .date-input, .time-input {
+            width: 100%;
+            padding: 12px 15px;
+            font-size: 16px;
+            border: 2px solid #dde1e7;
+            border-radius: 8px;
+            background: white;
+            transition: all 0.3s ease;
+        }
+
+        .date-input:focus, .time-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(0, 122, 204, 0.1);
+            outline: none;
+        }
+
+        .save-btn {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .availability-table-container {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .availability-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        .availability-table th {
+            position: sticky;
+            top: 0;
+            background: var(--primary);
+            padding: 15px;
+            color: white;
+            font-weight: 500;
+        }
+
+        .availability-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .availability-table tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        /* Ajoutez ces styles pour le formulaire de rendez-vous */
+        .styled-form {
+            background: #ffffff;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+            max-width: 500px;
+            margin: 20px auto;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-input:focus {
+            border-color: var(--primary);
+            outline: none;
+        }
+
+        .form-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: #5a6268;
+        }
     </style>
 </head>
 <body>
@@ -391,16 +565,25 @@ if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['section']) && $_GET['sec
             <?php
             // Compter les rendez-vous d'aujourd'hui
             $today = date('Y-m-d');
-            $sql_today = "SELECT COUNT(*) as count FROM appointments 
-                         WHERE doctor_id = ? AND DATE(appointment_datetime) = ? 
-                         AND status = 'scheduled'";
+            $sql_today = "SELECT a.*, p.name AS patient_name 
+                         FROM appointments a
+                         JOIN patients p ON a.patient_id = p.patient_id 
+                         WHERE a.doctor_id = ? 
+                         AND DATE(a.appointment_datetime) = CURRENT_DATE 
+                         AND a.status = 'scheduled'
+                         ORDER BY a.appointment_datetime DESC 
+                         LIMIT 1";
             $stmt = $conn->prepare($sql_today);
-            $stmt->bind_param("is", $doctor_id, $today);
+            $stmt->bind_param("i", $doctor_id);
             $stmt->execute();
-            $today_count = $stmt->get_result()->fetch_assoc()['count'];
+            $today_result = $stmt->get_result();
+            $today_appointment = $today_result->fetch_assoc();
 
             // Compter tous les rendez-vous
-            $sql_total = "SELECT COUNT(*) as count FROM appointments WHERE doctor_id = ?";
+            $sql_total = "SELECT COUNT(*) as count 
+                         FROM appointments 
+                         WHERE doctor_id = ? 
+                         AND status = 'scheduled'";
             $stmt = $conn->prepare($sql_total);
             $stmt->bind_param("i", $doctor_id);
             $stmt->execute();
@@ -409,7 +592,17 @@ if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['section']) && $_GET['sec
             <div class="stats-container">
                 <div class="stat-card">
                     <h4>Rendez-vous aujourd'hui</h4>
-                    <div class="number"><?php echo $today_count; ?></div>
+                    <div class="number">
+                        <?php 
+                        if ($today_appointment) {
+                            $date = new DateTime($today_appointment['appointment_datetime']);
+                            echo $date->format('H:i');
+                            echo "<div class='patient-name'>" . htmlspecialchars($today_appointment['patient_name']) . "</div>";
+                        } else {
+                            echo "Aucun";
+                        }
+                        ?>
+                    </div>
                 </div>
                 <div class="stat-card">
                     <h4>Total des rendez-vous</h4>
@@ -474,19 +667,31 @@ if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['section']) && $_GET['sec
         </section>
 
         <section id="rdv-list" class="section card" style="display:none">
-            <h2>Tous les rendez-vous</h2>
+            <h2>Gestion des rendez-vous</h2>
             <div class="rdv-container">
-                <!-- Le contenu existant de la liste complète des rendez-vous -->
                 <div class="add-rdv-section">
                     <h3>Ajouter un rendez-vous</h3>
-                    <form id="manual-rdv-form" method="POST">
-                        <!-- Formulaire d'ajout de rendez-vous manuel -->
-                        <input type="hidden" name="add_appointment" value="1">
-                        <label>Nom du patient: <input type="text" id="patient_name" name="patient_name" required></label>
-                        <label>Date: <input type="date" id="appointment_date" name="appointment_date" required></label>
-                        <label>Heure: <input type="time" id="appointment_time" name="appointment_time" required></label>
-                        <label>Motif: <input type="text" id="motif" required></label>
-                        <button type="submit">Ajouter</button>
+                    <form id="manual-rdv-form" class="styled-form" onsubmit="return saveAppointment(event)">
+                        <div class="form-group">
+                            <label for="patient_name">Nom du patient:</label>
+                            <input type="text" id="patient_name" name="patient_name" class="form-input" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="appointment_date">Date:</label>
+                            <input type="date" id="appointment_date" name="appointment_date" class="form-input" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="appointment_time">Heure:</label>
+                            <input type="time" id="appointment_time" name="appointment_time" class="form-input" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="motif">Motif:</label>
+                            <input type="text" id="motif" name="motif" class="form-input" required>
+                        </div>
+                        <div class="form-buttons">
+                            <button type="submit" class="btn btn-primary">Enregistrer</button>
+                            <button type="reset" class="btn btn-secondary">Réinitialiser</button>
+                        </div>
                     </form>
                 </div>
                 <div class="rdv-list">
@@ -548,55 +753,58 @@ if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['section']) && $_GET['sec
                 </div>
             </div>
         </section>
-        <section id="calendar" class="section" style="display:none">
+        <section id="calendar" class="section card" style="display:none">
             <h3>Ajouter une disponibilité</h3>
-            <form method="POST" class="calendar-form">
+            <form method="POST" class="calendar-form availability-form">
                 <input type="hidden" name="save_availability" value="1">
-                <div class="form-group">
+                <div class="form-group availability-input">
                     <label>Date :</label>
-                    <input type="date" name="date_calendrier" required>
+                    <input type="date" name="date_calendrier" class="date-input" required>
                 </div>
-                <div class="form-group">
+                <div class="form-group availability-input">
                     <label>Heure :</label>
-                    <input type="time" name="heure_calendrier" required>
+                    <input type="time" name="heure_calendrier" class="time-input" required>
                 </div>
-                <button type="submit" class="save-btn">Enregistrer</button>
+                <button type="submit" class="btn btn-primary save-btn">Enregistrer</button>
             </form>
 
             <div class="calendar-display">
                 <h4>Disponibilités enregistrées</h4>
-                <table class="rdv-table">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Heure</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php
-                        $sql = "SELECT * FROM calendrier ORDER BY date_calendrier, heure_calendrier";
-                        $result = $conn->query($sql);
+                <div class="availability-table-container">
+                    <table class="rdv-table availability-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Heure</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php
+                            $sql = "SELECT * FROM calendrier ORDER BY date_calendrier, heure_calendrier";
+                            $result = $conn->query($sql);
 
-                        if ($result && $result->num_rows > 0) {
-                            while ($row = $result->fetch_assoc()) {
-                                echo "<tr>";
-                                echo "<td>" . date('d/m/Y', strtotime($row['date_calendrier'])) . "</td>";
-                                echo "<td>" . date('H:i', strtotime($row['heure_calendrier'])) . "</td>";
-                                echo "<td>
-                                        <form method='post' style='display:inline;'>
-                                            <input type='hidden' name='delete_id' value='" . $row['id'] . "'>
-                                            <button type='submit' class='btn-cancel'>Supprimer</button>
-                                        </form>
-                                      </td>";
-                                echo "</tr>";
+                            if ($result && $result->num_rows > 0) {
+                                while ($row = $result->fetch_assoc()) {
+                                    echo "<tr>";
+                                    echo "<td>" . date('d/m/Y', strtotime($row['date_calendrier'])) . "</td>";
+                                    echo "<td>" . date('H:i', strtotime($row['heure_calendrier'])) . "</td>";
+                                    echo "<td>
+                                            <form method='post' style='display:inline;' onsubmit='return confirm(\"Êtes-vous sûr de vouloir supprimer cette disponibilité ?\")'>
+                                                <input type='hidden' name='delete_id' value='" . $row['id'] . "'>
+                                                <input type='hidden' name='current_section' value='calendar'>
+                                                <button type='submit' class='btn btn-danger'>Supprimer</button>
+                                            </form>
+                                          </td>";
+                                    echo "</tr>";
+                                }
+                            } else {
+                                echo "<tr><td colspan='3' class='text-center'>Aucune disponibilité</td></tr>";
                             }
-                        } else {
-                            echo "<tr><td colspan='3' style='text-align:center;'>Aucune disponibilité</td></tr>";
-                        }
-                        ?>
-                    </tbody>
-                </table>
+                            ?>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </section>
     </div>
@@ -621,35 +829,30 @@ if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['section']) && $_GET['sec
     </div>
 
     <script>
-        function loadStats() {
-            // Récupérer le nombre de rendez-vous d'aujourd'hui
-            let todayCount = document.querySelector('.stats-container .today-count');
-            let totalCount = document.querySelector('.stats-container .total-count');
-            
-            fetch('get_stats.php')
-            .then(response => response.json())
-            .then(data => {
-                todayCount.textContent = data.today;
-                totalCount.textContent = data.total;
-            });
-        }
-
         document.addEventListener('DOMContentLoaded', function() {
-            showSection('accueil');
+            // Récupérer la section active depuis PHP
+            const activeSection = '<?php echo $_SESSION["active_section"]; ?>';
+            showSection(activeSection);
         });
 
-        // Remplacer la fonction showSection existante
         function showSection(sectionId) {
+            // Masquer toutes les sections
             document.querySelectorAll('.section').forEach(section => {
                 section.style.display = 'none';
             });
 
+            // Afficher la section sélectionnée
             const selectedSection = document.getElementById(sectionId);
             if (selectedSection) {
                 selectedSection.style.display = 'block';
-                if (sectionId === "rdv-list") {
-                    loadAppointments();
-                }
+                // Sauvegarder la section active via AJAX
+                fetch('save_section.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: 'section=' + sectionId
+                });
             }
 
             // Mettre à jour la classe active dans la navigation
@@ -729,14 +932,87 @@ if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['section']) && $_GET['sec
                 form.submit();
             }
         }
+
+        document.getElementById('manual-rdv-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            
+            fetch('save_appointment.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    this.reset();
+                    location.reload();
+                } else {
+                    alert('Erreur: ' + (data.message || 'Erreur inconnue'));
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                alert('Erreur lors de l\'enregistrement du rendez-vous');
+            });
+        });
+
+        function cancelAppointment(appointmentId) {
+            if (confirm('Voulez-vous vraiment annuler ce rendez-vous ?')) {
+                fetch('cancel_appointment.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: 'appointment_id=' + appointmentId
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Rendez-vous annulé avec succès');
+                        location.reload();
+                    } else {
+                        alert('Erreur lors de l\'annulation du rendez-vous');
+                    }
+                });
+            }
+        }
+
+        function saveAppointment(event) {
+    event.preventDefault();
+    const form = document.getElementById('manual-rdv-form');
+    const formData = new FormData(form);
+
+    fetch('save_appointment.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            form.reset();
+            location.reload();
+        } else {
+            alert('Erreur: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        alert('Erreur lors de l\'enregistrement du rendez-vous');
+    });
+
+    return false;
+}
     </script>
 
     <style>
         nav a.active {
-            color: #0077b6;
-            font-weight: bold;
-            border-bottom: 2px solid #0077b6;
-        }
-    </style>
-</body>
-</html>
+
+
+
+
+
+
+</body>    </style>        }            border-bottom: 2px solid #0077b6;            font-weight: bold;            color: #0077b6;</html>
