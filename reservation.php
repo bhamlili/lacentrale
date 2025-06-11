@@ -4,6 +4,16 @@ session_start();
 include 'config.php';
 include 'db_config.php';
 
+// Récupérer les paramètres de l'URL
+$doctor_id = isset($_GET['doctor_id']) ? intval($_GET['doctor_id']) : null;
+$appointment_datetime = isset($_GET['datetime']) ? $_GET['datetime'] : null;
+
+// Vérifier si les paramètres requis sont présents
+if (!$doctor_id || !$appointment_datetime) {
+    header("Location: index.php");
+    exit();
+}
+
 // Vérifier la connexion
 if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
@@ -14,32 +24,43 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['submit'])) {
     $patient_nom = $_POST['nom'] ?? '';
     $patient_prenom = $_POST['prenom'] ?? '';
     $patient_email = $_POST['email'] ?? '';
-    $patient_telephone = $_POST['telephone'] ?? '';
+    $patient_telephone = $_POST['NUM'] ?? '';
 
     $doctor_id_post = $_POST['doctor_id'] ?? null;
     $appointment_datetime_post = $_POST['appointment_datetime'] ?? null;
 
     if ($patient_nom && $patient_prenom && $patient_email && $patient_telephone && $doctor_id_post && $appointment_datetime_post) {
-        // Check if patient already exists
-        $sql = "SELECT patient_id FROM patients WHERE email = '" . $conn->real_escape_string($patient_email) . "' OR telephone = '" . $conn->real_escape_string($patient_telephone) . "'";
-        $result = $conn->query($sql);
+        // Check if patient already exists with prepared statement
+        $check_sql = "SELECT patient_id FROM patients WHERE NUM = ?";
+        $check_stmt = $conn->prepare($check_sql);
+        if (!$check_stmt) {
+            die("Erreur de préparation : " . $conn->error);
+        }
+        $check_stmt->bind_param("s", $patient_telephone);
+        $check_stmt->execute();
+        $result = $check_stmt->get_result();
 
-        if ($result->num_rows > 0) {
+        if ($result && $result->num_rows > 0) {
             $patient = $result->fetch_assoc();
             $patient_id = $patient['patient_id'];
         } else {
-            // Insert new patient with separate email and phone
-            $sql = "INSERT INTO patients (name, email, telephone) VALUES (
-                '" . $conn->real_escape_string($patient_nom . ' ' . $patient_prenom) . "',
-                '" . $conn->real_escape_string($patient_email) . "',
-                '" . $conn->real_escape_string($patient_telephone) . "'
-            )";
-            if ($conn->query($sql) === TRUE) {
+            // Insert new patient with prepared statement
+            $insert_sql = "INSERT INTO patients (name, NUM) VALUES (?, ?)";
+            $insert_stmt = $conn->prepare($insert_sql);
+            if (!$insert_stmt) {
+                die("Erreur de préparation : " . $conn->error);
+            }
+            $full_name = $patient_nom . ' ' . $patient_prenom;
+            $insert_stmt->bind_param("ss", $full_name, $patient_telephone);
+            
+            if ($insert_stmt->execute()) {
                 $patient_id = $conn->insert_id;
             } else {
-                die("Error inserting patient: " . $conn->error);
+                die("Erreur d'insertion du patient : " . $conn->error);
             }
+            $insert_stmt->close();
         }
+        $check_stmt->close();
 
         // Vérifier si le créneau est toujours disponible
         $check_slot = "SELECT appointment_id FROM appointments 
@@ -52,38 +73,50 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['submit'])) {
         }
 
         // Insert appointment
-        $sql = "INSERT INTO appointments (doctor_id, patient_id, appointment_datetime) 
-                VALUES (" . intval($doctor_id_post) . ", " . intval($patient_id) . ", 
-                '" . $conn->real_escape_string($appointment_datetime_post) . "')";
+        $sql = "INSERT INTO appointments (
+            doctor_id, 
+            patient_id, 
+            appointment_datetime,
+            status,
+            nom,
+            prenom,
+            email,
+            NUM
+        ) VALUES (?, ?, ?, 'scheduled', ?, ?, ?, ?)";
+        
+        $stmt = $conn->prepare($sql);
+        if (!$stmt) {
+            die("Erreur de préparation : " . $conn->error);
+        }
+        
+        $stmt->bind_param(
+            "iisssss", 
+            $doctor_id_post, 
+            $patient_id, 
+            $appointment_datetime_post,
+            $patient_nom,
+            $patient_prenom,
+            $patient_email,
+            $patient_telephone
+        );
 
-        if ($conn->query($sql) === TRUE) {
-            // Récupérer les infos du médecin
-            $doctor_query = "SELECT name, specialty FROM doctors WHERE doctor_id = " . intval($doctor_id_post);
-            $doctor_result = $conn->query($doctor_query);
+        if ($stmt->execute()) {
+            $_SESSION['success_message'] = "✅ Rendez-vous enregistré avec succès!";
             
-            if (!$doctor_result) {
-                die("Error fetching doctor info: " . $conn->error);
-            }
-            
-            $doctor_info = $doctor_result->fetch_assoc();
-
-            $_SESSION['confirmation_details'] = [
-                'doctor_id' => $doctor_id_post,
-                'doctor_name' => $doctor_info['name'],
-                'doctor_specialty' => $doctor_info['specialty'],
-                'datetime' => $appointment_datetime_post,
-                'patient_nom' => $patient_nom,
-                'patient_prenom' => $patient_prenom,
-                'patient_email' => $patient_email,
-                'patient_telephone' => $patient_telephone,
-                'appointment_id' => $conn->insert_id
+            // Stocker les informations dans la session
+            $_SESSION['patient_info'] = [
+                'nom' => $patient_nom,
+                'prenom' => $patient_prenom,
+                'email' => $patient_email,
+                'NUM' => $patient_telephone
             ];
-
-            // Forcer la redirection
-            echo "<script>window.location.href = 'confirmation.php';</script>";
+            
+            header("Location: agenda.php?doctor_id=" . $doctor_id_post . "&success=1");
             exit();
         } else {
-            die("Error creating appointment: " . $conn->error);
+            $_SESSION['error_message'] = "❌ Erreur lors de l'enregistrement.";
+            header("Location: agenda.php?doctor_id=" . $doctor_id_post);
+            exit();
         }
     } else {
         echo "Please fill in all required fields.";
@@ -221,12 +254,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['submit'])) {
                 $result = $conn->query($sql);
                 if ($result->num_rows > 0) {
                     $doctor = $result->fetch_assoc();
-                    echo "<p>Rendez-vous avec Dr. " . htmlspecialchars($doctor['name']) . " le " . date('d/m/Y à H:i', strtotime($appointment_datetime)) . "</p>";
+                    echo "<p>Rendez-vous avec  " . htmlspecialchars($doctor['name']) . " le " . date('d/m/Y à H:i', strtotime($appointment_datetime)) . "</p>";
                 }
             } ?>
         </div>
 
-        <form id="form-reservation" method="POST" action="<?php echo generate_url('reservation.php'); ?>">
+        <form id="form-reservation" method="POST">
           <label>Nom :</label>
           <input type="text" name="nom" required />
 

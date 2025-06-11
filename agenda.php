@@ -65,11 +65,11 @@ if ($doctor_id <= 0 || !$doctor) {
     }
 
     .header {
-      background: white;
+      background: transparent;
       padding: 0 40px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-      margin-bottom: 40px;
-      height: 80px;
+      box-shadow: none;
+      margin-bottom: 20px;
+      height: 60px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -86,9 +86,9 @@ if ($doctor_id <= 0 || !$doctor) {
     }
 
     .logo img {
-      height: 130px;
+      height: 200px;
       width: auto;
-      margin-top: -15px;
+      margin-top: 0;
       object-fit: contain;
     }
 
@@ -159,7 +159,7 @@ if ($doctor_id <= 0 || !$doctor) {
 
 <?php if ($doctor): ?>
   <div class="doctor-info">
-    <h1>Dr. <?php echo htmlspecialchars($doctor['name']); ?></h1>
+    <h1> <?php echo htmlspecialchars($doctor['name']); ?></h1>
     <div class="specialty"><?php echo htmlspecialchars($doctor['specialty']); ?></div>
   </div>
   <h2>Choisissez une date de rendez-vous</h2>

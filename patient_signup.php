@@ -5,17 +5,20 @@ include './config.php';
 $message = '';
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $name = $_POST['name'];
+    $nom_complet = $_POST['name'];
     $email = $_POST['email'];
-    $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
-    $phone = $_POST['phone'];
+    $mot_de_passe = password_hash($_POST['password'], PASSWORD_DEFAULT);
+    $telephone = $_POST['phone'];
 
-    $sql = "INSERT INTO patients (name, email, password, phone) VALUES (?, ?, ?, ?)";
+    $sql = "INSERT INTO patientscnx (nom_complet, email, mot_de_passe, telephone) VALUES (?, ?, ?, ?)";
     $stmt = $conn->prepare($sql);
-    $stmt->bind_param("ssss", $name, $email, $password, $phone);
+    $stmt->bind_param("ssss", $nom_complet, $email, $mot_de_passe, $telephone);
     
     if ($stmt->execute()) {
-        $message = "Inscription réussie! Vous pouvez maintenant vous connecter.";
+        $_SESSION['user_id'] = $conn->insert_id;
+        $_SESSION['user_name'] = $nom_complet;
+        header("Location: patient_doctor_list.php");
+        exit();
     } else {
         $message = "Erreur lors de l'inscription: " . $conn->error;
     }
@@ -28,51 +31,53 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <title>Inscription Patient - LaCentrale.ma</title>
     <link rel="stylesheet" href="css/style.css" />
     <style>
-        header {
-            background-color: #0077b6;
-            padding: 15px 20px;
+        body {
+            font-family: Arial, sans-serif;
+            position: relative;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            justify-content: center;
+            background-attachment: fixed;
+        }
+
+        body::before {
+            content: '';
             position: fixed;
             top: 0;
             left: 0;
-            right: 0;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            z-index: 1000;
-        }
-
-        .logo {
-            display: flex;
-            align-items: center;
+            width: 100%;
+            height: 100%;
+            background: url('img/patient.jpg') no-repeat center center fixed;
+            background-size: cover;
+            filter: blur(8px);
+            z-index: -1;
         }
 
         .logo img {
-            height: 60px; /* Augmenter la taille du logo */
+            height: 200px; /* Augmenté de 150px à 200px */
             width: auto;
-            margin-right: 10px;
+            margin: -80px auto 20px; /* Ajusté la marge négative */
+            display: block;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
         }
 
-        body {
-          font-family: Arial, sans-serif;
-          background-color: #f4f4f4;
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          min-height: 100vh;
-          margin: 0;
-          padding-top: 80px;  /* Pour compenser la hauteur du header fixe */
-        }
         .signup-container {
-          background-color: #fff;
-          padding: 30px;
-          border-radius: 8px;
-          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-          width: 350px;
-          text-align: center;
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            width: 350px;
+            text-align: center;
+            margin: 20px 0;
+            position: relative;
         }
+
         .signup-container h2 {
-          margin-bottom: 20px;
-          color: #333;
+            margin-bottom: 20px;
+            color: #333;
         }
         .form-group {
           margin-bottom: 15px;
@@ -161,43 +166,35 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     </style>
 </head>
 <body>
-    <header>
+    <div class="signup-container">
         <div class="logo">
             <img src="img/la centrale1.png" alt="LaCentrale.ma">
         </div>
-    </header>
-
-    <div class="signup-container">
-    <h2>Patient Signup</h2>
-    <?php if ($message): ?>
-        <div class="message"><?php echo $message; ?></div>
-    <?php endif; ?>
-    
-    <form action="" method="post">
-      <div class="form-group">
-        <label for="name">Nom complet:</label>
-        <input type="text" id="name" name="name" required>
-      </div>
-      <div class="form-group">
-        <label for="email">Email:</label>
-        <input type="email" id="email" name="email" required>
-      </div>
-      <div class="form-group">
-        <label for="password">Mot de passe:</label>
-        <input type="password" id="password" name="password" required>
-      </div>
-      <div class="form-group">
-        <label for="phone">Téléphone:</label>
-        <input type="tel" id="phone" name="phone" required>
-      </div>
-      <button type="submit">S'inscrire</button>
-    </form>
-    <p>- OU -</p>
-    <a href="#" class="google-signup">Sign Up with Google</a>
-    <a href="#" class="gmail-signup">Sign Up with Gmail</a>
-    <br>
-    <a href="login.php" class="btn-pink">Nous rejoindre</a>
-  </div>
+        <h2>Inscription Patient</h2>
+        <?php if ($message): ?>
+            <div class="message"><?php echo $message; ?></div>
+        <?php endif; ?>
+        
+        <form action="" method="post">
+            <div class="form-group">
+                <label for="name">Nom complet:</label>
+                <input type="text" id="name" name="name" required>
+            </div>
+            <div class="form-group">
+                <label for="email">Email:</label>
+                <input type="email" id="email" name="email" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Mot de passe:</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            <div class="form-group">
+                <label for="phone">Téléphone:</label>
+                <input type="tel" id="phone" name="phone" required>
+            </div>
+            <button type="submit" class="btn-pink">S'inscrire</button>
+        </form>
+    </div>
 
 </body>
 </html>

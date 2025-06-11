@@ -354,7 +354,35 @@ if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['section']) && $_GET['sec
         /* Tables */
         .table {
             width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
             border-collapse: collapse;
+        }
+
+        .rdv-table {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border: 1px solid rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 1200px;
+            margin: 20px auto;
+        }
+
+        .rdv-table th {
+            background: var(--primary);
+            color: white;
+            font-weight: 500;
+            text-align: left;
+            padding: 20px;
+            font-size: 16px;
+        }
+
+        .rdv-table td {
+            padding: 15px 20px;
+            border-bottom: 1px solid #eee;
+            font-size: 15px;
         }
 
         .table th {

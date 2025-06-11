@@ -49,10 +49,11 @@ $conn->close();
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 10px 40px;
+            padding: 5px 40px;
             z-index: 1000;
             background: rgba(255, 255, 255, 0.9);
             backdrop-filter: blur(5px);
+            height: 80px; /* Réduire la hauteur */
         }
 
         .logo {
@@ -62,7 +63,7 @@ $conn->close();
         }
 
         .logo img {
-            height: 100px;  /* Réduit de 150px à 100px */
+            height: 200px;  /* Réduire la taille du logo */
             width: auto;
             padding: 5px 0;  /* Réduit de 10px à 5px */
         }
@@ -127,8 +128,14 @@ $conn->close();
         .doctor-image {
             width: 100%;
             height: 200px;
-            background: #f5f5f5 url('img/doctor-placeholder.png') center/cover;
+            background: white;
             border-bottom: 3px solid #0077b6;
+        }
+
+        .doctor-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
 
         .doctor-info {
@@ -170,6 +177,30 @@ $conn->close();
         .main-content {
             padding-top: 140px;
         }
+
+        .nav-container {
+            display: flex;
+            align-items: center;
+            gap: 30px;
+            margin-left: auto;
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            padding: 10px 20px;
+            background: #007acc;
+            border-radius: 25px;
+            color: white;
+            font-weight: 600;
+            font-size: 16px;
+            margin-left: 20px;
+        }
+
+        .user-profile i {
+            font-size: 20px;
+            margin-right: 10px;
+        }
     </style>
 </head>
 <body>
@@ -189,7 +220,14 @@ $conn->close();
                     <?php endif; ?>
                 <?php endforeach; ?>
             </select>
-            <a href="<?php echo generate_url('patient_signup.php'); ?>" class="btn-pink">Nous rejoindre</a>
+            <?php if(isset($_SESSION['user_name'])): ?>
+                <div class="user-profile">
+                    <i>👤</i>
+                    <?php echo htmlspecialchars($_SESSION['user_name']); ?>
+                </div>
+            <?php else: ?>
+                <a href="<?php echo generate_url('patient_signup.php'); ?>" class="btn-pink">Nous rejoindre</a>
+            <?php endif; ?>
         </div>
     </header>
 
@@ -198,7 +236,9 @@ $conn->close();
             <?php if (!empty($doctors)): ?>
                 <?php foreach ($doctors as $doctor): ?>
                     <div class="doctor-card" data-specialty="<?php echo htmlspecialchars($doctor['specialty']); ?>">
-                        <div class="doctor-image"></div>
+                        <div class="doctor-image">
+                            <img src="img/doc.jpg" alt="<?php echo htmlspecialchars($doctor['name']); ?>">
+                        </div>
                         <div class="doctor-info">
                             <h3><?php echo htmlspecialchars($doctor['name']); ?></h3>
                             <span class="specialty"><?php echo htmlspecialchars($doctor['specialty']); ?></span>

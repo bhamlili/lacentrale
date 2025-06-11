@@ -1,7 +1,3 @@
-<?php
-include 'config.php';
-?>
-
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -13,22 +9,25 @@ include 'config.php';
     body {
       margin: 0;
       font-family: 'Cairo', sans-serif;
-      background: #e8f4f8;
-      padding-top: 20px;
+      background: white;
+      padding-top: 0;
     }
 
     .topbar {
-      background: white;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-      padding: 10px 30px;
-      margin-bottom: 40px;
+      background: transparent;
+      box-shadow: none;
+      padding: 15px 30px;
+      margin-bottom: 20px;
       display: flex;
+      justify-content: flex-start;
       align-items: center;
+      height: 120px;
     }
 
     .topbar img {
-      height: 60px;
+      height: 200px;
       width: auto;
+      margin: 0;
     }
 
     .container {
@@ -119,13 +118,13 @@ include 'config.php';
 
   <div class="container">
     <div class="card patient">
-      <img src="img/patient.jpg" alt="Patient" />
-      <a href="<?php echo generate_url('patient_doctor_list.php'); ?>">Réserver un rendez-vous</a>
+      <img src="img/pass.jpg" alt="Patient" />
+      <a href="patient_doctor_list.php">Réserver un rendez-vous</a>
     </div>
 
     <div class="card medecin">
-      <img src="img/medecin.jpg" alt="Médecin" />
-      <a href="<?php echo generate_url('connexion.php'); ?>">Gestion des rendez-vous</a>
+      <img src="img/doc.jpg" alt="Médecin" />
+      <a href="connexion.php">Gestion des rendez-vous</a>
     </div>
   </div>
 </body>
