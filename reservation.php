@@ -379,7 +379,23 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['submit'])) {
               <input type="hidden" name="appointment_datetime" value="<?php echo htmlspecialchars($appointment_datetime); ?>">
 
               <button type="submit" class="btn-rdv" name="submit">Confirmer la réservation</button>
+ <button id="confirm-reservation" class="btn-rdv">Confirmer la réservation</button>
             </form>
+ <script>
+ document.getElementById('confirm-reservation').addEventListener('click', function() {
+ // Gather reservation data (you'll need to adapt this part to get the actual data from your form/inputs)
+ const reservationData = {
+ doctor: document.getElementById('doctor-select').value, // Example: get data from a select input
+ date: document.getElementById('date-input').value,
+ time: document.getElementById('time-input').value,
+ // Add other relevant data
+ };
+ // Construct the URL with query parameters
+ const url = '/confirmation.php?' + new URLSearchParams(reservationData).toString();
+ // Redirect to confirmation.php
+ window.location.href = url;
+ });
+ </script>
         <?php endif; ?>
     <?php
     $conn->close();
