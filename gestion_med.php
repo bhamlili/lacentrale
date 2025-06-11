@@ -369,6 +369,7 @@ if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['section']) && $_GET['sec
 </head>
 <body>
     <div class="navbar">
+ <nav>
         <div class="logo">
             <img src="img/La Centrale1.png" alt="LaCentrale.ma">
         </div>
@@ -380,6 +381,7 @@ if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['section']) && $_GET['sec
                 <li><a href="logout.php">Déconnexion</a></li>
             </ul>
         </nav>
+ </nav>
     </div>
 
     <div class="main-content">
@@ -433,6 +435,7 @@ if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['section']) && $_GET['sec
                 </form>
             </div>
             <div class="rdv-list">
+ <div id="appointments-section">
                 <h3>Liste des rendez-vous</h3>
                 <table>
                     <thead>
@@ -482,10 +485,12 @@ if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['section']) && $_GET['sec
                         $stmt->close();
                         ?>
                     </tbody>
+ </table>
                 </table>
             </div>
         </section>
         <section id="rdv-list" class="section" style="display:none">
+ <div id="appointments-section">
             <h3 class="section-title">Liste des Rendez-vous</h3>
             <div class="rdv-container">
                 <table class="rdv-table">
@@ -507,6 +512,8 @@ if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['section']) && $_GET['sec
                     </tbody>
                 </table>
             </div>
+ </div>
+
         </section>
         <section id="calendar" class="section" style="display:none">
             <h3>Ajouter une disponibilité</h3>
@@ -560,6 +567,26 @@ if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['section']) && $_GET['sec
             </div>
         </section>
     </div>
+
+    <div id="calendar-section" style="display: none;">
+ <h2>Ajouter Disponibilité</h2>
+ <form id="availability-form" method="post" action="">
+ <div>
+ <label for="available-date">Date:</label>
+ <input type="date" id="available-date" name="available-date" required>
+ </div>
+ <div>
+ <label for="available-time">Heure:</label>
+ <input type="time" id="available-time" name="available-time" required>
+ </div>
+ <button type="submit">Ajouter Disponibilité</button>
+ </form>
+
+ <div id="calendar">
+ <!-- Calendar will be displayed here -->
+ </div>
+    </div>
+
     <script>
         // Afficher la section accueil par défaut au chargement
         document.addEventListener('DOMContentLoaded', function() {
