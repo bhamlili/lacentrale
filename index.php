@@ -9,8 +9,22 @@
     body {
       margin: 0;
       font-family: 'Cairo', sans-serif;
-      background: white;
+      position: relative;
       padding-top: 0;
+      min-height: 100vh;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: url('img/accueil.jpg') no-repeat center center fixed;
+      background-size: cover;
+      filter: blur(8px);
+      z-index: -1;
     }
 
     .topbar {

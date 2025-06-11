@@ -1,19 +1,35 @@
 <?php
 session_start();
+include './db_config.php';
 
-// Vérifier si les détails de confirmation existent
-if (!isset($_SESSION['confirmation_details'])) {
-    header("Location: index.php");
+if (!isset($_GET['id'])) {
+    header('Location: index.php');
     exit();
 }
 
-$details = $_SESSION['confirmation_details'];
+$appointment_id = intval($_GET['id']);
+
+// Récupérer les informations du rendez-vous
+$sql = "SELECT 
+    a.appointment_datetime,
+    a.nom,
+    a.prenom,
+    a.email,
+    a.num,
+    d.name as doctor_name
+    FROM appointments a
+    JOIN doctors d ON a.doctor_id = d.doctor_id
+    WHERE a.appointment_id = ?";
+
+$stmt = $conn->prepare($sql);
+$stmt->bind_param("i", $appointment_id);
+$stmt->execute();
+$rdv = $stmt->get_result()->fetch_assoc();
 ?>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Confirmation de rendez-vous</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
     <style>
@@ -31,90 +47,97 @@ $details = $_SESSION['confirmation_details'];
 
         .confirmation-card {
             background: white;
-            padding: 30px;
+            padding: 40px;
             border-radius: 15px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            max-width: 600px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
             width: 100%;
-            margin: 20px;
-            border: 2px solid #0077b6;
+            max-width: 500px;
         }
 
-        .title {
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo img {
+            height: 100px;
+            width: auto;
+        }
+
+        h2 {
             color: #0077b6;
             text-align: center;
             margin-bottom: 30px;
         }
 
-        .details-section {
-            margin: 20px 0;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 10px;
-        }
-
         .detail-row {
             display: flex;
             justify-content: space-between;
-            padding: 10px 0;
-            border-bottom: 1px solid #e0e0e0;
+            padding: 15px 0;
+            border-bottom: 1px solid #eee;
         }
 
-        .detail-label {
+        .actions {
+            margin-top: 30px;
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border-radius: 8px;
+            text-decoration: none;
             font-weight: 600;
-            color: #0077b6;
+            text-align: center;
+            flex: 1;
+        }
+
+        .btn-pdf {
+            background: #dc3545;
+            color: white;
         }
 
         .btn-retour {
-            display: block;
-            width: 200px;
-            margin: 20px auto 0;
-            padding: 12px;
             background: #0077b6;
             color: white;
-            text-align: center;
-            text-decoration: none;
-            border-radius: 8px;
-            font-weight: 600;
         }
     </style>
 </head>
 <body>
     <div class="confirmation-card">
-        <h2 class="title">✅ Rendez-vous confirmé</h2>
-
-        <div class="details-section">
-            <div class="detail-row">
-                <span class="detail-label">Médecin:</span>
-                <span>Dr. <?php echo htmlspecialchars($details['doctor_name']); ?></span>
-            </div>
-            <div class="detail-row">
-                <span class="detail-label">Spécialité:</span>
-                <span><?php echo htmlspecialchars($details['doctor_specialty']); ?></span>
-            </div>
-            <div class="detail-row">
-                <span class="detail-label">Date et heure:</span>
-                <span><?php echo date('d/m/Y à H:i', strtotime($details['datetime'])); ?></span>
-            </div>
-            <div class="detail-row">
-                <span class="detail-label">Patient:</span>
-                <span><?php echo htmlspecialchars($details['patient_nom'] . ' ' . $details['patient_prenom']); ?></span>
-            </div>
-            <div class="detail-row">
-                <span class="detail-label">Email:</span>
-                <span><?php echo htmlspecialchars($details['patient_email']); ?></span>
-            </div>
-            <div class="detail-row">
-                <span class="detail-label">Téléphone:</span>
-                <span><?php echo htmlspecialchars($details['patient_telephone']); ?></span>
-            </div>
+        <div class="logo">
+            <img src="img/la centrale1.png" alt="LaCentrale.ma">
+        </div>
+        <h2>✅ Rendez-vous confirmé</h2>
+        
+        <div class="detail-row">
+            <span>Date et heure:</span>
+            <span><?php echo date('d/m/Y à H:i', strtotime($rdv['appointment_datetime'])); ?></span>
+        </div>
+        <div class="detail-row">
+            <span>Médecin:</span>
+            <span>Dr. <?php echo htmlspecialchars($rdv['doctor_name']); ?></span>
+        </div>
+        <div class="detail-row">
+            <span>Patient:</span>
+            <span><?php echo htmlspecialchars($rdv['nom'] . ' ' . $rdv['prenom']); ?></span>
+        </div>
+        <div class="detail-row">
+            <span>Email:</span>
+            <span><?php echo htmlspecialchars($rdv['email']); ?></span>
+        </div>
+        <div class="detail-row">
+            <span>Téléphone:</span>
+            <span><?php echo htmlspecialchars($rdv['num']); ?></span>
         </div>
 
-        <a href="index.php" class="btn-retour">Retour à l'accueil</a>
+        <div class="actions">
+            <a href="export_pdf.php?id=<?php echo $appointment_id; ?>" class="btn btn-pdf">
+                📄 Télécharger PDF
+            </a>
+            <a href="index.php" class="btn btn-retour">Retour à l'accueil</a>
+        </div>
     </div>
 </body>
 </html>
-<?php
-// Nettoyer les données de session après affichage
-unset($_SESSION['confirmation_details']);
-?>

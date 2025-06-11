@@ -24,14 +24,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['submit'])) {
     $patient_nom = $_POST['nom'] ?? '';
     $patient_prenom = $_POST['prenom'] ?? '';
     $patient_email = $_POST['email'] ?? '';
-    $patient_telephone = $_POST['NUM'] ?? '';
+    $patient_telephone = $_POST['num'] ?? '';
 
     $doctor_id_post = $_POST['doctor_id'] ?? null;
     $appointment_datetime_post = $_POST['appointment_datetime'] ?? null;
 
     if ($patient_nom && $patient_prenom && $patient_email && $patient_telephone && $doctor_id_post && $appointment_datetime_post) {
-        // Check if patient already exists with prepared statement
-        $check_sql = "SELECT patient_id FROM patients WHERE NUM = ?";
+        // Check if patient already exists
+        $check_sql = "SELECT patient_id FROM patients WHERE num = ?";
         $check_stmt = $conn->prepare($check_sql);
         if (!$check_stmt) {
             die("Erreur de préparation : " . $conn->error);
@@ -44,15 +44,20 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['submit'])) {
             $patient = $result->fetch_assoc();
             $patient_id = $patient['patient_id'];
         } else {
-            // Insert new patient with prepared statement
-            $insert_sql = "INSERT INTO patients (name, NUM) VALUES (?, ?)";
+            // Insert new patient
+            $insert_sql = "INSERT INTO patients (nom, prenom, email, num) VALUES (?, ?, ?, ?)";
             $insert_stmt = $conn->prepare($insert_sql);
             if (!$insert_stmt) {
                 die("Erreur de préparation : " . $conn->error);
             }
-            $full_name = $patient_nom . ' ' . $patient_prenom;
-            $insert_stmt->bind_param("ss", $full_name, $patient_telephone);
             
+            $insert_stmt->bind_param("ssss", 
+                $patient_nom, 
+                $patient_prenom, 
+                $patient_email, 
+                $patient_telephone
+            );
+
             if ($insert_stmt->execute()) {
                 $patient_id = $conn->insert_id;
             } else {
@@ -81,19 +86,21 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['submit'])) {
             nom,
             prenom,
             email,
-            NUM
-        ) VALUES (?, ?, ?, 'scheduled', ?, ?, ?, ?)";
+            num
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         
         $stmt = $conn->prepare($sql);
         if (!$stmt) {
             die("Erreur de préparation : " . $conn->error);
         }
         
+        $status = 'confirmed';
         $stmt->bind_param(
-            "iisssss", 
+            "iissssss", 
             $doctor_id_post, 
             $patient_id, 
             $appointment_datetime_post,
+            $status,
             $patient_nom,
             $patient_prenom,
             $patient_email,
@@ -101,17 +108,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['submit'])) {
         );
 
         if ($stmt->execute()) {
-            $_SESSION['success_message'] = "✅ Rendez-vous enregistré avec succès!";
-            
-            // Stocker les informations dans la session
-            $_SESSION['patient_info'] = [
-                'nom' => $patient_nom,
-                'prenom' => $patient_prenom,
-                'email' => $patient_email,
-                'NUM' => $patient_telephone
-            ];
-            
-            header("Location: agenda.php?doctor_id=" . $doctor_id_post . "&success=1");
+            $appointment_id = $conn->insert_id;
+            header("Location: confirmation.php?id=" . $appointment_id);
             exit();
         } else {
             $_SESSION['error_message'] = "❌ Erreur lors de l'enregistrement.";
@@ -239,6 +237,75 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['submit'])) {
         .btn-rdv:hover {
             background: #005f8d;
         }
+
+        .confirmation-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+
+        .details-section {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+
+        .actions {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-pdf {
+            background: #0077b6;
+            color: white;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+            text-align: center;
+            flex: 1;
+        }
+
+        .btn-pdf:hover {
+            background: #005f8d;
+        }
+
+        .btn-retour {
+            background: #6c757d;
+            color: white;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+            text-align: center;
+            flex: 1;
+        }
+
+        .btn-retour:hover {
+            background: #5a6268;
+        }
     </style>
 </head>
 <body>
@@ -259,28 +326,61 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['submit'])) {
             } ?>
         </div>
 
-        <form id="form-reservation" method="POST">
-          <label>Nom :</label>
-          <input type="text" name="nom" required />
+        <!-- Ajouter avant le formulaire -->
+        <?php if (isset($_GET['confirmation']) && isset($_SESSION['confirmation_data'])): ?>
+            <div class="confirmation-message">
+                <h2>✅ Rendez-vous confirmé avec succès</h2>
+                <div class="details-section">
+                    <div class="detail-row">
+                        <span>Date et heure:</span>
+                        <span><?php echo date('d/m/Y à H:i', strtotime($_SESSION['confirmation_data']['appointment_datetime'])); ?></span>
+                    </div>
+                    <div class="detail-row">
+                        <span>Médecin:</span>
+                        <span>Dr. <?php echo htmlspecialchars($_SESSION['confirmation_data']['doctor_name']); ?></span>
+                    </div>
+                    <div class="detail-row">
+                        <span>Patient:</span>
+                        <span><?php echo htmlspecialchars($_SESSION['confirmation_data']['nom'] . ' ' . $_SESSION['confirmation_data']['prenom']); ?></span>
+                    </div>
+                    <div class="detail-row">
+                        <span>Email:</span>
+                        <span><?php echo htmlspecialchars($_SESSION['confirmation_data']['email']); ?></span>
+                    </div>
+                    <div class="detail-row">
+                        <span>Téléphone:</span>
+                        <span><?php echo htmlspecialchars($_SESSION['confirmation_data']['num']); ?></span>
+                    </div>
+                    
+                    <div class="actions">
+                        <a href="export_pdf.php?id=<?php echo $_SESSION['confirmation_data']['appointment_id']; ?>" class="btn-pdf">
+                            📄 Télécharger PDF
+                        </a>
+                        <a href="index.php" class="btn-retour">Retour à l'accueil</a>
+                    </div>
+                </div>
+            </div>
+        <?php unset($_SESSION['confirmation_data']); ?>
+        <?php else: ?>
+            <!-- Afficher le formulaire de réservation existant -->
+            <form id="form-reservation" method="POST">
+              <label>Nom :</label>
+              <input type="text" name="nom" required />
 
-          <label>Prénom :</label>
-          <input type="text" name="prenom" required />
+              <label>Prénom :</label>
+              <input type="text" name="prenom" required />
 
-          <label>Email :</label>
-          <input type="email" name="email" required />
+              <label>Email :</label>
+              <input type="email" name="email" required />
 
-          <label>Téléphone :</label>
-          <input type="tel" name="telephone" required />
-          <input type="hidden" name="doctor_id" value="<?php echo htmlspecialchars($doctor_id); ?>">
-          <input type="hidden" name="appointment_datetime" value="<?php echo htmlspecialchars($appointment_datetime); ?>">
+              <label>Téléphone :</label>
+              <input type="tel" name="telephone" required />
+              <input type="hidden" name="doctor_id" value="<?php echo htmlspecialchars($doctor_id); ?>">
+              <input type="hidden" name="appointment_datetime" value="<?php echo htmlspecialchars($appointment_datetime); ?>">
 
-          <button type="submit" class="btn-rdv" name="submit">Confirmer la réservation</button>
-        </form>
-
-        <div id="confirmation-message" style="display:none;">ation</button>
-          <h3>✅ Rendez-vous confirmé !</h3>
-        </div>
-
+              <button type="submit" class="btn-rdv" name="submit">Confirmer la réservation</button>
+            </form>
+        <?php endif; ?>
     <?php
     $conn->close();
     ?>
