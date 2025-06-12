@@ -10,24 +10,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['login_submit'])) {
     $username = $_POST['username'];
     $password = $_POST['password'];
 
-    // Prepare and execute the query
-    $stmt = $link->prepare("SELECT doctor_id, password FROM doctors WHERE username = ?");
-    $stmt->bind_param("s", $username);
+    // Requête simplifiée pour vérifier directement username et password
+    $stmt = $link->prepare("SELECT doctor_id, name FROM doctors WHERE username = ? AND password = ?");
+    $stmt->bind_param("ss", $username, $password);
     $stmt->execute();
-    $stmt->store_result();
+    $result = $stmt->get_result();
 
-    if ($stmt->num_rows > 0) {
-        $stmt->bind_result($doctor_id, $hashed_password);
-        $stmt->fetch();
-
-        // Verify password
-        if (password_verify($password, $hashed_password)) {
-            $_SESSION['doctor_id'] = $doctor_id;
-            header("Location: gestion_med.php");
-            exit();
-        } else {
-            $loginError = "Nom d'utilisateur ou mot de passe incorrect.";
-        }
+    if ($result->num_rows > 0) {
+        $doctor = $result->fetch_assoc();
+        $_SESSION['doctor_id'] = $doctor['doctor_id'];
+        $_SESSION['doctor_name'] = $doctor['name'];
+        header("Location: gestion_med.php");
+        exit();
     } else {
         $loginError = "Nom d'utilisateur ou mot de passe incorrect.";
     }

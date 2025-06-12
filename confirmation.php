@@ -7,14 +7,6 @@ if (!isset($_GET['id'])) {
     exit();
 }
 
-// Retrieve data from URL parameters (Assuming 'doctor', 'date', and 'time' are passed, although current code uses 'id')
-// You might need to adapt this based on how data is actually passed from reservation.php
-$doctor = $_GET['doctor'] ?? '';
-$date = $_GET['date'] ?? '';
-$time = $_GET['time'] ?? '';
-// You might need to retrieve the appointment details again using the 'id' if not all data is in the URL
-}
-
 $appointment_id = intval($_GET['id']);
 
 // Récupérer les informations du rendez-vous
@@ -33,6 +25,11 @@ $stmt = $conn->prepare($sql);
 $stmt->bind_param("i", $appointment_id);
 $stmt->execute();
 $rdv = $stmt->get_result()->fetch_assoc();
+
+if (!$rdv) {
+    header('Location: index.php');
+    exit();
+}
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -43,7 +40,7 @@ $rdv = $stmt->get_result()->fetch_assoc();
     <style>
         body {
             font-family: 'Poppins', sans-serif;
-            background: url('img/rdv.jpg') no-repeat center center fixed;
+            background: url('img/accueil.jpg') no-repeat center center fixed;
             background-size: cover;
             min-height: 100vh;
             margin: 0;
@@ -118,14 +115,7 @@ $rdv = $stmt->get_result()->fetch_assoc();
             <img src="img/la centrale1.png" alt="LaCentrale.ma">
         </div>
         <h2>✅ Rendez-vous confirmé</h2>
-
-        <h2>Détails de la réservation :</h2>
-        <p><strong>Médecin :</strong> <?php echo htmlspecialchars($doctor); ?></p>
-        <p><strong>Date :</strong> <?php echo htmlspecialchars($date); ?></p>
-        <p><strong>Heure :</strong> <?php echo htmlspecialchars($time); ?></p>
-        <!-- Display other data you retrieve -->
-
-        <!-- The existing appointment details display is likely what you want to keep -->
+        
         <div class="detail-row">
             <span>Date et heure:</span>
             <span><?php echo date('d/m/Y à H:i', strtotime($rdv['appointment_datetime'])); ?></span>
@@ -133,10 +123,26 @@ $rdv = $stmt->get_result()->fetch_assoc();
         <div class="detail-row">
             <span>Médecin:</span>
             <span>Dr. <?php echo htmlspecialchars($rdv['doctor_name']); ?></span>
-
         </div>
+        <div class="detail-row">
+            <span>Nom:</span>
+            <span><?php echo htmlspecialchars($rdv['nom']); ?></span>
+        </div>
+        <div class="detail-row">
+            <span>Prénom:</span>
+            <span><?php echo htmlspecialchars($rdv['prenom']); ?></span>
+        </div>
+        <div class="detail-row">
+            <span>Email:</span>
+            <span><?php echo htmlspecialchars($rdv['email']); ?></span>
+        </div>
+        <div class="detail-row">
+            <span>Téléphone:</span>
+            <span><?php echo htmlspecialchars($rdv['num']); ?></span>
+        </div>
+
         <div class="actions">
-            <a href="export_pdf.php?id=<?php echo $appointment_id; ?>" class="btn btn-pdf">
+            <a href="export_pdf.php?id=<?php echo htmlspecialchars($appointment_id); ?>" class="btn btn-pdf" target="_blank">
                 📄 Télécharger PDF
             </a>
             <a href="index.php" class="btn btn-retour">Retour à l'accueil</a>

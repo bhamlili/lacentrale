@@ -24,70 +24,35 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['submit'])) {
     $patient_nom = $_POST['nom'] ?? '';
     $patient_prenom = $_POST['prenom'] ?? '';
     $patient_email = $_POST['email'] ?? '';
-    $patient_telephone = $_POST['num'] ?? '';
-
+    $patient_num = $_POST['num'] ?? '';
     $doctor_id_post = $_POST['doctor_id'] ?? null;
     $appointment_datetime_post = $_POST['appointment_datetime'] ?? null;
 
-    if ($patient_nom && $patient_prenom && $patient_email && $patient_telephone && $doctor_id_post && $appointment_datetime_post) {
-        // Check if patient already exists
-        $check_sql = "SELECT patient_id FROM patients WHERE num = ?";
-        $check_stmt = $conn->prepare($check_sql);
-        if (!$check_stmt) {
-            die("Erreur de préparation : " . $conn->error);
-        }
-        $check_stmt->bind_param("s", $patient_telephone);
-        $check_stmt->execute();
-        $result = $check_stmt->get_result();
-
-        if ($result && $result->num_rows > 0) {
-            $patient = $result->fetch_assoc();
-            $patient_id = $patient['patient_id'];
-        } else {
-            // Insert new patient
-            $insert_sql = "INSERT INTO patients (nom, prenom, email, num) VALUES (?, ?, ?, ?)";
-            $insert_stmt = $conn->prepare($insert_sql);
-            if (!$insert_stmt) {
-                die("Erreur de préparation : " . $conn->error);
-            }
-            
-            $insert_stmt->bind_param("ssss", 
-                $patient_nom, 
-                $patient_prenom, 
-                $patient_email, 
-                $patient_telephone
-            );
-
-            if ($insert_stmt->execute()) {
-                $patient_id = $conn->insert_id;
-            } else {
-                die("Erreur d'insertion du patient : " . $conn->error);
-            }
-            $insert_stmt->close();
-        }
-        $check_stmt->close();
-
+    if ($patient_nom && $patient_prenom && $patient_email && $patient_num && $doctor_id_post && $appointment_datetime_post) {
         // Vérifier si le créneau est toujours disponible
         $check_slot = "SELECT appointment_id FROM appointments 
-                      WHERE doctor_id = " . intval($doctor_id_post) . " 
-                      AND appointment_datetime = '" . $conn->real_escape_string($appointment_datetime_post) . "'";
-        $slot_result = $conn->query($check_slot);
+                      WHERE doctor_id = ? AND appointment_datetime = ?";
+        $check_stmt = $conn->prepare($check_slot);
+        $check_stmt->bind_param("is", $doctor_id_post, $appointment_datetime_post);
+        $check_stmt->execute();
+        $result = $check_stmt->get_result();
         
-        if ($slot_result->num_rows > 0) {
-            die("Ce créneau n'est plus disponible.");
+        if ($result->num_rows > 0) {
+            $_SESSION['error_message'] = "Ce créneau n'est plus disponible. Veuillez choisir un autre horaire.";
+            header("Location: agenda.php?doctor_id=" . $doctor_id_post);
+            exit();
         }
 
         // Insert appointment
         $sql = "INSERT INTO appointments (
-            doctor_id, 
-            patient_id, 
+            doctor_id,
             appointment_datetime,
             status,
             nom,
             prenom,
             email,
             num
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)";
         
         $stmt = $conn->prepare($sql);
         if (!$stmt) {
@@ -96,19 +61,38 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['submit'])) {
         
         $status = 'confirmed';
         $stmt->bind_param(
-            "iissssss", 
-            $doctor_id_post, 
-            $patient_id, 
+            "issssss", 
+            $doctor_id_post,
             $appointment_datetime_post,
             $status,
             $patient_nom,
             $patient_prenom,
             $patient_email,
-            $patient_telephone
+            $patient_num
         );
 
         if ($stmt->execute()) {
             $appointment_id = $conn->insert_id;
+            
+            // Récupérer les données pour la confirmation
+            $sql_confirm = "SELECT 
+                a.appointment_id,
+                a.appointment_datetime,
+                a.nom,
+                a.prenom,
+                a.email,
+                a.num,
+                d.name as doctor_name
+                FROM appointments a
+                JOIN doctors d ON a.doctor_id = d.doctor_id
+                WHERE a.appointment_id = ?";
+            
+            $stmt_confirm = $conn->prepare($sql_confirm);
+            $stmt_confirm->bind_param("i", $appointment_id);
+            $stmt_confirm->execute();
+            $confirmation = $stmt_confirm->get_result()->fetch_assoc();
+            
+            $_SESSION['confirmation_data'] = $confirmation;
             header("Location: confirmation.php?id=" . $appointment_id);
             exit();
         } else {
@@ -363,39 +347,32 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['submit'])) {
         <?php unset($_SESSION['confirmation_data']); ?>
         <?php else: ?>
             <!-- Afficher le formulaire de réservation existant -->
+            <!-- Formulaire -->
             <form id="form-reservation" method="POST">
-              <label>Nom :</label>
-              <input type="text" name="nom" required />
+                <label>Nom :</label>
+                <input type="text" name="nom" required />
 
-              <label>Prénom :</label>
-              <input type="text" name="prenom" required />
+                <label>Prénom :</label>
+                <input type="text" name="prenom" required />
 
-              <label>Email :</label>
-              <input type="email" name="email" required />
+                <label>Email :</label>
+                <input type="email" name="email" required />
 
-              <label>Téléphone :</label>
-              <input type="tel" name="telephone" required />
-              <input type="hidden" name="doctor_id" value="<?php echo htmlspecialchars($doctor_id); ?>">
-              <input type="hidden" name="appointment_datetime" value="<?php echo htmlspecialchars($appointment_datetime); ?>">
-
-              <button type="submit" class="btn-rdv" name="submit">Confirmer la réservation</button>
- <button id="confirm-reservation" class="btn-rdv">Confirmer la réservation</button>
+                <label>Téléphone :</label>
+                <input type="tel" name="num" required /> <!-- Changé name="telephone" en name="num" -->
+                
+                <input type="hidden" name="doctor_id" value="<?php echo htmlspecialchars($doctor_id); ?>">
+                <input type="hidden" name="appointment_datetime" value="<?php echo htmlspecialchars($appointment_datetime); ?>">
+                
+                <button type="submit" name="submit" class="btn-rdv">Confirmer la réservation</button>
             </form>
- <script>
- document.getElementById('confirm-reservation').addEventListener('click', function() {
- // Gather reservation data (you'll need to adapt this part to get the actual data from your form/inputs)
- const reservationData = {
- doctor: document.getElementById('doctor-select').value, // Example: get data from a select input
- date: document.getElementById('date-input').value,
- time: document.getElementById('time-input').value,
- // Add other relevant data
- };
- // Construct the URL with query parameters
- const url = '/confirmation.php?' + new URLSearchParams(reservationData).toString();
- // Redirect to confirmation.php
- window.location.href = url;
- });
- </script>
+
+            <?php if(isset($_SESSION['error_message'])): ?>
+                <div class="error-message" style="background: #fde8e8; color: #e53e3e; padding: 12px; border-radius: 8px; margin-top: 15px; text-align: center;">
+                    <?php echo htmlspecialchars($_SESSION['error_message']); ?>
+                </div>
+                <?php unset($_SESSION['error_message']); ?>
+            <?php endif; ?>
         <?php endif; ?>
     <?php
     $conn->close();
