@@ -657,51 +657,7 @@ if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['section']) && $_GET['sec
                 </thead>
                 <tbody>
                     <?php
-    php
-<?php
-// Assuming you have a database connection in $conn and the doctor's ID in $doctor_id
-
-// Get the current date and time
-$current_datetime = date('Y-m-d H:i:s');
-
-// SQL query to select upcoming appointments for a specific doctor
-// Replace $doctor_id with the actual doctor's ID variable if it's different
-$sql = "SELECT * FROM appointments WHERE doctor_id = ? AND appointment_datetime >= ? ORDER BY appointment_datetime ASC";
-
-// Prepare the statement
-$stmt = $conn->prepare($sql);
-
-// Bind parameters (replace $doctor_id with the actual doctor ID variable if it's different)
-$stmt->bind_param("is", $doctor_id, $current_datetime);
-
-// Execute the statement
-$stmt->execute();
-
-// Get the result set
-$result = $stmt->get_result();
-
-// Check if there are any appointments
-if ($result->num_rows > 0) {
-    // Output data in a table
-    echo "<h2>Upcoming Appointments</h2>";
-    echo "<table>";
-    echo "<tr><th>Patient Name</th><th>Date and Time</th><th>Status</th></tr>";
-    while($row = $result->fetch_assoc()) {
-        echo "<tr>";
-        echo "<td>" . htmlspecialchars($row['nom']) . " " . htmlspecialchars($row['prenom']) . "</td>";
-        echo "<td>" . htmlspecialchars($row['appointment_datetime']) . "</td>";
-        echo "<td>" . htmlspecialchars($row['status']) . "</td>";
-        echo "</tr>";
-    }
-    echo "</table>";
-} else {
-    echo "No upcoming appointments found.";
-}
-
-// Close the statement (you might want to keep the connection open if you need it later in the file)
-$stmt->close();
-?>
-                $sql = "SELECT * FROM appointments 
+                    $sql = "SELECT * FROM appointments 
                            WHERE doctor_id = ? 
                            AND DATE(appointment_datetime) >= CURDATE()
                            AND status != 'cancelled'
@@ -714,7 +670,7 @@ $stmt->close();
 
                     $stmt->bind_param("i", $doctor_id);
                     if (!$stmt->execute()) {
-                        die("Erreur d'exécution: " . $stmt->error);
+                        die(" Erreur d'exécution: " . $stmt->error);
                     }
 
                     $result = $stmt->get_result();
