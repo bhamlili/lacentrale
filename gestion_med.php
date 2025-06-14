@@ -148,6 +148,27 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['save_availability'])) 
     $stmt->close();
 }
 
+// Modifier le handler de suppression
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['delete_id'])) {
+    $delete_id = $_POST['delete_id'];
+    
+    $sql_delete = "DELETE FROM calendrier WHERE id = ?";
+    $stmt_delete = $conn->prepare($sql_delete);
+    $stmt_delete->bind_param("i", $delete_id);
+    
+    if ($stmt_delete->execute()) {
+        $_SESSION['message'] = 'Disponibilité supprimée avec succès';
+        $_SESSION['active_section'] = 'calendar';
+        header("Location: " . $_SERVER['PHP_SELF'] . "#calendar");
+    } else {
+        $_SESSION['message'] = 'Erreur lors de la suppression: ' . $conn->error;
+        $_SESSION['active_section'] = 'calendar';
+        header("Location: " . $_SERVER['PHP_SELF'] . "#calendar");
+    }
+    $stmt_delete->close();
+    exit();
+}
+
 // Ajouter ce handler pour la suppression des disponibilités
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['delete_id'])) {
     $delete_id = $_POST['delete_id'];
@@ -571,7 +592,7 @@ if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['section']) && $_GET['sec
         </div>
         <nav>
             <ul>
-                <li><a href="#accueil" class="nav-link">Accueil</a></li>
+                <li><a href="#accueil" class="nav-link active">Accueil</a></li>
                 <li><a href="#rdv-list" class="nav-link">Rendez-vous</a></li>
                 <li><a href="#calendar" class="nav-link">Calendrier</a></li>
                 <li><a href="logout.php">Déconnexion</a></li>
@@ -695,6 +716,7 @@ if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['section']) && $_GET['sec
         <section id="rdv-list" class="section card" style="display:none">
             <h2>Ajouter un nouveau rendez-vous</h2>
             <form id="addAppointmentForm" class="styled-form">
+                <input type="hidden" name="add_appointment" value="1">
                 <div class="form-group">
                     <label for="nom">Nom du patient</label>
                     <input type="text" id="nom" name="nom" class="form-input" required>
@@ -777,45 +799,27 @@ if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['section']) && $_GET['sec
                             } else {
                                 echo "<tr><td colspan='3' class='text-center'>Aucune disponibilité</td></tr>";
                             }
-                            ?>display: 
- <!-- Calendar will be displayed here -->
- </div>
-    </div>
-
-    <script>
-                        </tbody>
-                    </table>
-                </div>
+                        ?>
+                    </tbody>
+                </table>
             </div>
-        </section>
-    </div>
+        </div>
+    </section>
+</div>
 
-    <div id="calendar-section" style="
-        document.addEventListener('DOMContentLoaded', function() {
-            // Afficher la section accueil par défaut
-            showSection('accueil');
-            
-            // Ajouter les écouteurs d'événements pour tous les liens de navigation
-            document.querySelectorAllnone;">
- <h2>Ajouter Disponibilité</h2>
- <form id="availability-form" method="post" action="">
- <div>
- <label for="available-date">Date:</label>
- <input type="date" id="available-date" name="available-date" required>
- </div>
- <div>
- <label for="available-time">Heure:</label>
- <input type="time" id="available-time" name="available-time" required>
- </div>
- <button type="submit">Ajouter Disponibilité</button>
- </form>('nav a').forEach(link => {
-                link.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const sectionId = this.getAttribute('href').substring(1);
-                    showSection(sectionId);
-                });
-            });
-        });
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Afficher la section accueil par défaut
+        showSection('accueil');
+        
+// Ajouter les écouteurs d'événements pour tous les liens de navigation
+document.querySelectorAll('nav a').forEach(link => {
+    link.addEventListener('click', function(e) {
+        e.preventDefault();
+        const sectionId = this.getAttribute('href').substring(1);
+        showSection(sectionId);
+    });
+});
 
         function showSection(sectionId) {
             // Masquer toutes les sections
@@ -847,7 +851,30 @@ if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['section']) && $_GET['sec
             fetch("gestion_med.php?section=rdv")
                 .then(response => response.json())
                 .then(data => {
-                    const tbody = document.getElementById("rdv-tbody");
+                    // Create tbody if it doesn't exist
+                    let tbody = document.getElementById("rdv-tbody");
+                    if (!tbody) {
+                        const table = document.createElement("table");
+                        table.className = "rdv-table";
+                        table.innerHTML = `<thead>
+                            <tr>
+                                <th>Patient</th>
+                                <th>Téléphone</th>
+                                <th>Date</th>
+                                <th>Heure</th>
+                                <th>Statut</th>
+                                <th>Médecin</th>
+                                <th>Spécialité</th>
+                                <th>Motif</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>`;
+                        tbody = document.createElement("tbody");
+                        tbody.id = "rdv-tbody";
+                        table.appendChild(tbody);
+                        document.getElementById("rdv-list").appendChild(table);
+                    }
+                    
                     tbody.innerHTML = "";
                     
                     if (data.length === 0) {
@@ -862,13 +889,13 @@ if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['section']) && $_GET['sec
                             <td>${escapeHtml(rdv.patient_name)}</td>
                             <td>${escapeHtml(rdv.patient_phone)}</td>
                             <td>${date.toLocaleDateString()}</td>
-                            <td>${date.toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"})}</td>
+                            <td>${date.toLocaleTimeString()}</td>
                             <td>${escapeHtml(rdv.status)}</td>
                             <td>${escapeHtml(rdv.doctor_name)}</td>
                             <td>${escapeHtml(rdv.specialty)}</td>
                             <td>${escapeHtml(rdv.motif)}</td>
                             <td>
-                                <button class="btn-cancel" onclick="cancelAppointment(${rdv.appointment_id})">
+                                <button onclick="cancelAppointment(${rdv.appointment_id})" class="btn btn-danger">
                                     Annuler
                                 </button>
                             </td>
@@ -911,52 +938,6 @@ if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['section']) && $_GET['sec
                 `;
                 document.body.appendChild(form);
                 form.submit();
-            }
-        }
-
-        document.getElementById('manual-rdv-form').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const formData = new FormData(this);
-            
-            fetch('save_appointment.php', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then data => {
-                if (data.success) {
-                    alert(data.message);
-                    this.reset();
-                    location.reload();
-                } else {
-                    alert('Erreur: ' + (data.message || 'Erreur inconnue'));
-                }
-            })
-            .catch(error => {
-                console.error('Erreur:', error);
-                alert('Erreur lors de l\'enregistrement du rendez-vous');
-            });
-        });
-
-        function cancelAppointment(appointmentId) {
-            if (confirm('Voulez-vous vraiment annuler ce rendez-vous ?')) {
-                fetch('cancel_appointment.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: 'appointment_id=' + appointmentId
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        alert('Rendez-vous annulé avec succès');
-                        location.reload();
-                    } else {
-                        alert('Erreur lors de l\'annulation du rendez-vous');
-                    }
-                });
             }
         }
 
@@ -1028,6 +1009,7 @@ if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['section']) && $_GET['sec
                     <td>${escapeHtml(rdv.num)}</td>
                     <td>${date.toLocaleDateString()}</td>
                     <td>${date.toLocaleTimeString()}</td>
+                    <td>${escapeHtml(rdv.status)}</td>
                     <td>${escapeHtml(rdv.motif)}</td>
                     <td>
                         <button onclick="cancelAppointment(${rdv.appointment_id})" class="btn btn-danger">
@@ -1037,21 +1019,18 @@ if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['section']) && $_GET['sec
                 `;
                 tbody.appendChild(tr);
             });
-        });
+        })
+        .catch(error => console.error('Erreur:', error));
     }
 
-    // Charger les rendez-vous au chargement de la page
-    if (document.getElementById('rdv-list').style.display !== 'none') {
-        loadAppointments();
+    // Vérifier si une section active est définie
+    const urlHash = window.location.hash;
+    if (urlHash) {
+        showSection(urlHash.substring(1));
+    } else {
+        showSection('accueil');
     }
-    </script>
-
-    <style>
-        nav a.active {
-            border-bottom: 2px solid #0077b6;
-            font-weight: bold;
-            color: #0077b6;
-        }
-    </style>
+    });
+</script>
 </body>
 </html>
