@@ -148,27 +148,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['save_availability'])) 
     $stmt->close();
 }
 
-// Modifier le handler de suppression
-if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['delete_id'])) {
-    $delete_id = $_POST['delete_id'];
-    
-    $sql_delete = "DELETE FROM calendrier WHERE id = ?";
-    $stmt_delete = $conn->prepare($sql_delete);
-    $stmt_delete->bind_param("i", $delete_id);
-    
-    if ($stmt_delete->execute()) {
-        $_SESSION['message'] = 'Disponibilité supprimée avec succès';
-        $_SESSION['active_section'] = 'calendar';
-        header("Location: " . $_SERVER['PHP_SELF'] . "#calendar");
-    } else {
-        $_SESSION['message'] = 'Erreur lors de la suppression: ' . $conn->error;
-        $_SESSION['active_section'] = 'calendar';
-        header("Location: " . $_SERVER['PHP_SELF'] . "#calendar");
-    }
-    $stmt_delete->close();
-    exit();
-}
-
 // Ajouter ce handler pour la suppression des disponibilités
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['delete_id'])) {
     $delete_id = $_POST['delete_id'];
@@ -812,12 +791,17 @@ if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['section']) && $_GET['sec
         // Afficher la section accueil par défaut
         showSection('accueil');
         
-// Ajouter les écouteurs d'événements pour tous les liens de navigation
+// Modifier l'écouteur d'événements pour les liens de navigation
 document.querySelectorAll('nav a').forEach(link => {
     link.addEventListener('click', function(e) {
-        e.preventDefault();
-        const sectionId = this.getAttribute('href').substring(1);
-        showSection(sectionId);
+        const href = this.getAttribute('href');
+        if (href && href.startsWith('#')) {
+            e.preventDefault();
+            const sectionId = href.substring(1);
+            showSection(sectionId);
+        }
+        // Pour les liens ne commençant pas par # (comme logout.php),
+        // l'action par défaut (navigation) sera autorisée.
     });
 });
 
@@ -1005,7 +989,13 @@ document.querySelectorAll('nav a').forEach(link => {
                 tr.innerHTML = `
                     <td>${escapeHtml(rdv.nom)}</td>
                     <td>${escapeHtml(rdv.prenom)}</td>
-                    <td>${escapeHtml(rdv.email)}</td>
+                // Charger les rendez-vous au chargement de la page
+    const rdvListSection = document.getElementById('rdv-list');
+    if (rdvListSection && rdvListSection.style.display !== 'none') {
+        loadAppointments();
+    }
+
+                <td>${escapeHtml(rdv.email)}</td>
                     <td>${escapeHtml(rdv.num)}</td>
                     <td>${date.toLocaleDateString()}</td>
                     <td>${date.toLocaleTimeString()}</td>
@@ -1021,14 +1011,6 @@ document.querySelectorAll('nav a').forEach(link => {
             });
         })
         .catch(error => console.error('Erreur:', error));
-    }
-
-    // Vérifier si une section active est définie
-    const urlHash = window.location.hash;
-    if (urlHash) {
-        showSection(urlHash.substring(1));
-    } else {
-        showSection('accueil');
     }
     });
 </script>
