@@ -17,10 +17,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if ($stmt->execute()) {
         $_SESSION['user_id'] = $conn->insert_id;
         $_SESSION['user_name'] = $nom_complet;
-        header("Location: patient_doctor_list.php");
-        exit();
+        $message = "Compte créé avec succès! Bienvenue " . htmlspecialchars($nom_complet);
+        $messageClass = "success-message";
     } else {
         $message = "Erreur lors de l'inscription: " . $conn->error;
+        $messageClass = "error-message";
     }
 }
 ?>
@@ -163,17 +164,43 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             margin: 0;
             padding: 0;
         }
+
+        .success-message {
+            background-color: #4CAF50;
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin: -20px -20px 20px -20px;
+            text-align: center;
+            font-weight: bold;
+            animation: slideDown 0.5s ease-out;
+        }
+
+        .error-message {
+            background-color: #f44336;
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin: -20px -20px 20px -20px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        @keyframes slideDown {
+            from { transform: translateY(-100%); }
+            to { transform: translateY(0); }
+        }
     </style>
 </head>
 <body>
     <div class="signup-container">
+        <?php if ($message): ?>
+            <div class="<?php echo $messageClass; ?>"><?php echo $message; ?></div>
+        <?php endif; ?>
         <div class="logo">
             <img src="img/la centrale1.png" alt="LaCentrale.ma">
         </div>
         <h2>Inscription Patient</h2>
-        <?php if ($message): ?>
-            <div class="message"><?php echo $message; ?></div>
-        <?php endif; ?>
         
         <form action="" method="post">
             <div class="form-group">

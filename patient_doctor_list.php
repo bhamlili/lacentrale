@@ -2,9 +2,19 @@
 include './db_config.php';
 include './config.php';
 
-// Modifier la requête SQL pour obtenir les spécialités
-$sql_specialties = "SELECT DISTINCT specialty FROM doctors ORDER BY specialty";
+// Simplifier la requête SQL pour obtenir uniquement les spécialités uniques
+$sql_specialties = "SELECT DISTINCT specialty 
+                   FROM doctors 
+                   WHERE specialty IS NOT NULL 
+                   ORDER BY specialty";
 $result_specialties = $conn->query($sql_specialties);
+
+$specialties = [];
+if ($result_specialties->num_rows > 0) {
+    while ($row = $result_specialties->fetch_assoc()) {
+        $specialties[] = $row['specialty'];
+    }
+}
 
 // Améliorer la requête SQL pour inclure plus d'informations
 $sql = "SELECT d.doctor_id, d.name, d.specialty, d.contact_info FROM doctors d ORDER BY d.specialty";
@@ -86,6 +96,7 @@ $conn->close();
         }
 
         .specialty-menu {
+            min-width: 250px;
             padding: 12px 20px;
             border: 2px solid #ff4081;
             border-radius: 25px;
@@ -97,9 +108,15 @@ $conn->close();
             transition: all 0.3s;
         }
 
-        .specialty-menu:hover {
-            background: #ff4081;
-            color: white;
+        .specialty-menu option {
+            padding: 10px;
+            font-size: 14px;
+        }
+
+        .specialty-count {
+            color: #666;
+            font-size: 0.9em;
+            margin-left: 5px;
         }
 
         .doctor-list {
@@ -211,7 +228,6 @@ $conn->close();
         <div class="nav-container">
             <select class="specialty-menu" id="specialtyFilter">
                 <option value="all">Toutes les spécialités</option>
-                <option value="none">Non spécifié</option>
                 <?php foreach ($specialties as $specialty): ?>
                     <?php if (!empty($specialty)): ?>
                         <option value="<?php echo htmlspecialchars($specialty); ?>">

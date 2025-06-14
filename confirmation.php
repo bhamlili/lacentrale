@@ -142,7 +142,7 @@ if (!$rdv) {
         </div>
 
         <div class="actions">
-            <a href="export_pdf.php?id=<?php echo htmlspecialchars($appointment_id); ?>" class="btn btn-pdf" target="_blank">
+            <a href="export_pdf.php?id=<?php echo $appointment_id; ?>" class="btn btn-pdf" download>
                 📄 Télécharger PDF
             </a>
             <a href="index.php" class="btn btn-retour">Retour à l'accueil</a>
