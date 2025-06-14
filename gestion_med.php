@@ -63,38 +63,40 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_appointment'])) {
     $appointment_time = $_POST['appointment_time'];
     $motif = $_POST['motif'];
 
-    // Combine date and time for the database
+    // Combiner la date et l'heure
     $appointment_datetime = $appointment_date . ' ' . $appointment_time;
 
-    // Insérer d'abord le patient s'il n'existe pas
-    $sql_check_patient = "SELECT patient_id FROM patients WHERE name = ?";
-    $stmt = $conn->prepare($sql_check_patient);
-    $stmt->bind_param("s", $patient_name);
-    $stmt->execute();
-    $patient_result = $stmt->get_result();
-
-    if ($patient_result->num_rows > 0) {
-        $patient_id = $patient_result->fetch_assoc()['patient_id'];
-    } else {
-        // Créer un nouveau patient
-        $sql_insert_patient = "INSERT INTO patients (name) VALUES (?)";
-        $stmt = $conn->prepare($sql_insert_patient);
-        $stmt->bind_param("s", $patient_name);
-        $stmt->execute();
-        $patient_id = $conn->insert_id;
-    }
-
     // Insérer le rendez-vous
-    $sql_insert_appointment = "INSERT INTO appointments (doctor_id, patient_id, appointment_datetime, motif, status) 
-                             VALUES (?, ?, ?, ?, 'scheduled')";
-    $stmt = $conn->prepare($sql_insert_appointment);
-    $stmt->bind_param("iiss", $doctor_id, $patient_id, $appointment_datetime, $motif);
+    $sql = "INSERT INTO appointments (
+        doctor_id,
+        appointment_datetime,
+        status,
+        nom,
+        motif
+    ) VALUES (?, ?, ?, ?, ?)";
     
+    $stmt = $conn->prepare($sql);
+    $status = 'scheduled';
+    
+    $stmt->bind_param("issss", 
+        $doctor_id,
+        $appointment_datetime,
+        $status,
+        $patient_name,
+        $motif
+    );
+
     if ($stmt->execute()) {
-        echo json_encode(['success' => true]);
+        echo json_encode([
+            'success' => true,
+            'message' => 'Rendez-vous enregistré avec succès!'
+        ]);
         exit();
     } else {
-        echo json_encode(['success' => false, 'error' => $conn->error]);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Erreur lors de l\'enregistrement: ' . $conn->error
+        ]);
         exit();
     }
 }
@@ -643,40 +645,46 @@ if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['section']) && $_GET['sec
             <table class="rdv-table">
                 <thead>
                     <tr>
-                        <th>Patient</th>
-                        <th>Date</th>
-                        <th>Heure</th>
+                        <th>ID</th>
+                        <th>Nom</th>
+                        <th>Prénom</th>
+                        <th>Email</th>
+                        <th>Téléphone</th>
+                        <th>Date et heure</th>
                         <th>Statut</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php
-                    $sql = "SELECT a.appointment_id, 
-                           p.patient_id,
-                           p.name AS patient_name,
-                           a.appointment_datetime,
-                           a.status
-                           FROM appointments a
-                           JOIN patients p ON a.patient_id = p.patient_id
-                           WHERE a.doctor_id = ? 
-                           AND a.status = 'scheduled'
-                           AND DATE(a.appointment_datetime) >= CURDATE()
-                           ORDER BY a.appointment_datetime ASC
-                           LIMIT 5";
+                    $sql = "SELECT * FROM appointments 
+                           WHERE doctor_id = ? 
+                           AND DATE(appointment_datetime) >= CURDATE()
+                           AND status != 'cancelled'
+                           ORDER BY appointment_datetime ASC";
                     
                     $stmt = $conn->prepare($sql);
-                    $stmt->bind_param("i", $_SESSION['doctor_id']);
-                    $stmt->execute();
+                    if (!$stmt) {
+                        die("Erreur de préparation de la requête: " . $conn->error);
+                    }
+
+                    $stmt->bind_param("i", $doctor_id);
+                    if (!$stmt->execute()) {
+                        die("Erreur d'exécution: " . $stmt->error);
+                    }
+
                     $result = $stmt->get_result();
 
-                    if ($result->num_rows > 0) {
+                    if ($result && $result->num_rows > 0) {
                         while ($row = $result->fetch_assoc()) {
                             $date = new DateTime($row['appointment_datetime']);
                             echo "<tr>";
-                            echo "<td>" . htmlspecialchars($row['patient_name']) . "</td>";
-                            echo "<td>" . $date->format('d/m/Y') . "</td>";
-                            echo "<td>" . $date->format('H:i') . "</td>";
+                            echo "<td>" . htmlspecialchars($row['appointment_id']) . "</td>";
+                            echo "<td>" . htmlspecialchars($row['nom']) . "</td>";
+                            echo "<td>" . htmlspecialchars($row['prenom']) . "</td>";
+                            echo "<td>" . htmlspecialchars($row['email']) . "</td>";
+                            echo "<td>" . htmlspecialchars($row['num']) . "</td>";
+                            echo "<td>" . $date->format('d/m/Y H:i') . "</td>";
                             echo "<td>" . htmlspecialchars($row['status']) . "</td>";
                             echo "<td>
                                 <button onclick='cancelAppointment({$row['appointment_id']})' class='btn btn-danger'>
@@ -686,7 +694,7 @@ if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['section']) && $_GET['sec
                             echo "</tr>";
                         }
                     } else {
-                        echo "<tr><td colspan='5' class='text-center'>Aucun rendez-vous prévu</td></tr>";
+                        echo "<tr><td colspan='8'></td></tr>";
                     }
                     $stmt->close();
                     ?>
@@ -971,7 +979,7 @@ if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['section']) && $_GET['sec
                 body: formData
             })
             .then(response => response.json())
-            .then(data => {
+            .then data => {
                 if (data.success) {
                     alert(data.message);
                     this.reset();
